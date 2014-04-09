@@ -52,3 +52,12 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+
+### Server Configuration Files (by MA) ###
+config.py
+flask/
+makeplan.sql
+run.py
+runp.py
+search.db/
+
