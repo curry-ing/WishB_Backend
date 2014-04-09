@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block stylesheet %}
+<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/html5study.css') }}">
+{% endblock %}
+{% block content %}
+<!-- Nav tabs -->
+<div class="col-md-12">
+    <div style="margin: 10px">
+	<ul class="nav nav-tabs">
+        <li><a href="#1209" data-toggle="tab">12/09</a></li>
+        <li class="active"><a href="#1210" data-toggle="tab">12/10</a></li>
+        <li><a href="#1211" data-toggle="tab">12/11</a></li>
+        <li><a href="#1212" data-toggle="tab">12/12</a></li>
+        <li><a href="#1213" data-toggle="tab">12/13</a></li>
+    </ul>
+    </div>
+    <div id="bucketMain" class="tab-content">
+      <div id="1209" class="tab-pane fade"><h1>1일차</h1></div><!-- div: bucketAll -->
+      <div id="1210" class="tab-pane fade in active">
+          <h1>2일차</h1>
+          {% include "html5study/1210.html" %}
+      </div><!-- addBucketDecade -->
+      <div id="1211" class="tab-pane fade"><h1>3일차</h1></div><!-- addBucketYearly -->
+      <div id="1212" class="tab-pane fade"><h1>4일차</h1></div><!-- addBucketMonthly -->
+      <div id="1213" class="tab-pane fade"><h1>5일차</h1></div><!-- addBucketWeekly -->
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('.static', filename = 'js/html5study/1210.js') }}"></script>
+{% endblock %}

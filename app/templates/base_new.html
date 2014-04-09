@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+    <head>
+        {% if title %}
+            <title>{{title}} - DreamProject</title>
+        {% else %}
+            <title>Dream Project</title>
+        {% endif %}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+{#		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/app.css') }}">#}
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/bootstrap-datetimepicker.css') }}">
+
+		{% block stylesheet %}{% endblock %}
+        <script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script src="{{ url_for('.static', filename = 'js/moment.min.js') }}"></script>
+		
+        {% if g.locale != 'en' %}
+{#        <!-- <script src="{{ url_for('.static', filename = 'js/moment-' + 'g.locale' + '.min.js') }}"></script> -->#}
+        {% endif %}
+        <script> // MicroSoft Translation
+            function translate(sourceLang, destLang, sourceId, destId, loadingId) {
+                $(destId).hide();
+                $(loadingId).show();
+                $.post('/translate', {
+                    text: $(sourceId).text(),
+                    sourceLang: sourceLang,
+                    destLang: destLang
+                }).done(function(translated) {
+                    $(destId).text(translated['text'])
+                    $(loadingId).hide();
+                    $(destId).show();
+                }).fail(function() {
+                    $(destId).text("{{ _('Error: Could not contact server.') }}");
+                    $(loadingId).hide();
+                    $(destId).show();
+                });
+            }
+        </script>
+    </head>
+    <body>
+        {% block content %}{% endblock %}
+        <footer class="container">
+            <hr>
+            <p>© Company 2013</p>
+        </footer>
+        
+		<script src="{{ url_for('.static', filename = 'js/bootstrap-datetimepicker.min.js') }}"></script>
+
+        {% block script %}{% endblock %}
+    </body>
+</html>

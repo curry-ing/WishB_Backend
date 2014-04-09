@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Registration</h1>
+<hr>
+<br>
+<a href=""><h3>Sign up with Facebook</h3></a>
+<br>
+<h3>or Using E-mail address</h3>
+<form action="" method="post" name="edit">
+    {{form.hidden_tag()}}
+    <table>
+        <tr>
+            <td>email</td>
+            <td>
+                {{form.email(size=24)}}
+                {% for error in form.errors.email %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>        
+        <tr>
+            <td>username</td>
+            <td>
+                {{form.username(size=24)}}
+                {% for error in form.errors.username %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td>password:</td>
+            <td>
+                {{form.password(size=24)}}
+                {% for error in form.errors.password %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td>validation:</td>
+            <td>
+                {{form.validate_pwd(size=24)}}
+                {% for error in form.errors.validate_pwd %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><input type="submit" value="Sign Up"></td>
+        </tr>
+    </table>
+</form>
+{% endblock %}

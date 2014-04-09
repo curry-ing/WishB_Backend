@@ -1,0 +1,29 @@
+<!doctype html>
+{#<html manifest="/static/js/html5study/tracker.appcache">#}
+<html>
+    <head>
+        {% if title %}
+            <title>{{title}} - DreamProject</title>
+        {% else %}
+            <title>Dream Project</title>
+        {% endif %}
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/app.css') }}">
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/bootstrap-datetimepicker.css') }}">
+
+		{% block stylesheet %}{% endblock %}
+        <script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script src="{{ url_for('.static', filename = 'js/moment.min.js') }}"></script>
+
+    </head>
+    <body>
+        <div class="col-sm-6 col-sm-offset-3">
+            <h2>Display Photo <small>- Dream proj.</small></h2>
+
+            {{ url }}
+            <img src="{{ url }}">
+        </div><!-- /.col-lg-6 -->
+    </body>
+</html>

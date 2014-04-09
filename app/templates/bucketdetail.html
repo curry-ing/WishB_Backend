@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'flash.html' %}
+<div class="row">
+    <div id="bucketDetail" class="col-md-8 col-md-offset-2">
+    {% include 'single_bucket.html' %}
+    </div>
+    <div id="bucketSocial">
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('.static', filename = 'js/bucketdetail.js') }}"></script>
+<script>
+    var bucketDetailViewModel = new BucketDetailViewModel('{{ bucket.id }}');
+    ko.applyBindings(bucketDetailViewModel, $('#bucketDetail')[0]);
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!doctype html>
+{#<html manifest="/static/js/html5study/tracker.appcache">#}
+<html>
+    <head>
+        {% if title %}
+            <title>{{title}} - DreamProject</title>
+        {% else %}
+            <title>Dream Project</title>
+        {% endif %}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/app.css') }}">
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/bootstrap-datetimepicker.css') }}">
+
+		{% block stylesheet %}{% endblock %}
+        <script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script src="{{ url_for('.static', filename = 'js/moment.min.js') }}"></script>
+
+    </head>
+    <body>
+        <div class="col-sm-6 col-sm-offset-3 col-xs-12">
+            <h2>Upload Photo <small>- Dream proj.</small></h2>
+            <input type="file" name="photo" id="photo">
+            <button type="button" class="btn btn-primary" id="uploadBtn">Upload!!</button>
+        </div><!-- /.col-lg-6 -->
+    </body>
+        <script>
+        $(document).ready(function(){
+            $("#uploadBtn").click(UploadFile);
+        });
+
+        var UploadFile = function(){
+            var data = new FormData();
+            data.append('photo',$("#photo")[0].files[0])
+            $.ajax({
+                type:'POST',
+                url:'http://masunghoon.iptime.org:5001/api/file',
+                contentType: false,
+                processData: false,
+                data: data,
+                success:function(res){
+                    alert(res.status + '\n' + res.description); {# TODO: Change to Flash #}
+                    window.location = 'http://masunghoon.iptime.org:5001/photo/' + res.data.id;
+                },
+                error:function(res){
+                    alert(res.responseJSON.status + '\n' + res.responseJSON.description);
+                }
+            });
+        }
+    </script>
+</html>

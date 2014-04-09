@@ -1,0 +1,252 @@
+{% extends "base_new.html" %}
+{% block content %}
+    <div class="container">
+        <h1>Registration<small> - Dream proj.</small></h1>
+        <hr>
+        {% include "flash.html" %}
+        <form class="form-horizontal" role="form">
+            <div class="form-group has-feedback" id="inputEmailGroup">
+                <label for="inputEmail" class="col-sm-2 col-sm-offset-3 control-label" id="inputEmailLabel">Email</label>
+                <div class="col-sm-4">
+                    <input type="email" class="form-control" id="inputEmail" placeholder="Email">
+                    <span class="form-control-feedback" id="inputEmailGlyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group has-feedback" id="inputPassword1Group">
+                <label for="inputPassword1" class="col-sm-2 col-sm-offset-3 control-label">Password</label>
+                <div class="col-sm-4">
+                    <input type="password" class="form-control" id="inputPassword1" placeholder="Enter Password">
+                    <span class="form-control-feedback" id="inputPassword1Glyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group has-feedback" id="inputPassword2Group">
+                <label for="inputPassword2" class="col-sm-2 col-sm-offset-3 control-label">Verify Password</label>
+                <div class="col-sm-4">
+                    <input type="password" class="form-control" id="inputPassword2" placeholder="Re-Enter Password">
+                    <span class="form-control-feedback" id="inputPassword2Glyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-5 col-sm-4">
+                    <button type="submit" class="btn btn-default disabled" id="registerBtn">Register</button>
+                    <button type="button" class="btn btn-primary" id="loginWithFacebookBtn">Log in with FACEBOOK</button>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+{% block script %}
+    <script>
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : '26843049662703',
+                status     : true,
+                cookie     : true,
+                xfbml      : true
+        });
+
+        $(document).trigger('fbload');  //  <---- THIS RIGHT HERE TRIGGERS A CUSTOM EVENT CALLED 'fbload'
+    };
+
+
+    $(document).on(
+        'fbload',  //  <---- HERE'S OUR CUSTOM EVENT BEING LISTENED FOR
+        function(){
+            //some code that requires the FB object
+            //such as...
+            FB.getLoginStatus(function(res){
+                if( res.status == "connected" ){
+                    FB.api('/me', function(fbUser) {
+                        console.log("Open the pod bay doors, " + fbUser.name + ".");
+                    });
+                }
+            });
+
+        }
+    );
+
+    $(document).ready(function(){
+{#        $("#resetPasswdBtn").click(resetPassword);#}
+        $("#inputEmail").keyup(EmailValidation);
+        $("#inputEmail").focusout(UniqueEmail);
+        $("#inputPassword1").keyup(PasswordValidation);
+        $("#inputPassword2").keyup(VerifyPasswords);
+        $("#registerBtn").click(RegisterUser);
+        $("#loginWithFacebookBtn").click(LoginWithFacebook);
+    });
+    baseUrl = 'http://masunghoon.iptime.org:5001/api';
+    EmailIsUnique = false;
+
+    var EmailValidation = function(){
+        var emailAddr = $("#inputEmail").val();
+        if(IsEmail(emailAddr)){
+            $("#inputEmailGroup").attr('class','form-group has-success has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputEmailGroup").attr('class','form-group has-error has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    var UniqueEmail = function(){
+        var emailAddr = $("#inputEmail").val();
+
+        if(IsEmail(emailAddr) && IsUnusedEmail(emailAddr)){
+            $("#inputEmailGroup").attr('class','form-group has-success has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputEmailGroup").attr('class','form-group has-error has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    var PasswordValidation = function(){
+        if (PasswordIsValid()) {
+            $("#inputPassword1Group").attr('class','form-group has-success has-feedback');
+            $("#inputPassword1Glyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+        } else {
+            $("#inputPassword1Group").attr('class','form-group has-error has-feedback');
+            $("#inputPassword1Glyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+        }
+    }
+
+    var VerifyPasswords = function(){
+        if(PasswordsAreSame()){
+            $("#inputPassword2Group").attr('class','form-group has-success has-feedback');
+            $("#inputPassword2Glyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputPassword2Group").attr('class','form-group has-error has-feedback');
+            $("#inputPassword2Glyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    function PasswordIsValid(){
+        var password = $("#inputPassword1").val();
+        if (password.length > 5) {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    var PasswordsAreSame = function(){
+        if($("#inputPassword1").val() == $("#inputPassword2").val()){
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    function IsEmail(email) {
+        var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+        return regex.test(email);
+    }
+
+    var IsUnusedEmail = function(email) {
+        var self = this;
+
+
+        self.ajax = function(uri, method, data){
+            var request = {
+                url: baseUrl+uri,
+                type: method,
+                async: false,
+                contentType: 'application/json',
+                accepts: 'application/json',
+                cache: false,
+                dataType: 'json',
+                data: JSON.stringify(data),
+                error:function(jqXHR){
+                    console.log("ajax error " + jqXHR.status);
+                }
+            };
+            return $.ajax(request);
+        }
+
+        self.ajax('/valid_email/'+email, 'GET').done(function(data){
+            console.log("SUCCESS");
+            if(data.code == '1'){
+                console.log('1:'+data.description);
+                EmailIsUnique =  true;
+            } else {
+                console.log('0:'+data.description);
+                EmailIsUnique = false;
+            }
+        });
+        return EmailIsUnique;
+    }
+
+    var CheckAllFieldsAreValidated = function(){
+        emailAddr = $("#inputEmail").val();
+        if (IsEmail(emailAddr) && PasswordIsValid() && PasswordsAreSame() && EmailIsUnique){
+            $("#registerBtn").attr('class','btn btn-success enabled');
+        } else {
+            $("#registerBtn").attr('class','btn btn-default disabled');
+        }
+    }
+
+    var RegisterUser = function(){
+        var data={email:$("#inputEmail").val(),password:$("#inputPassword1").val()};
+
+        self.ajax = function(uri, method, data){
+            var request = {
+                url: baseUrl+uri,
+                type: method,
+                async: false,
+                contentType: 'application/json',
+                accepts: 'application/json',
+                cache: false,
+                dataType: 'json',
+                data: JSON.stringify(data),
+                error:function(jqXHR){
+                    console.log("ajax error " + jqXHR.status);
+                    alert("Error!!!");
+                }
+            };
+            return $.ajax(request);
+        }
+
+        self.ajax('/users','POST',data).done(function(data){
+            console.log(data);
+            localStorage.clear('id','token','email','username');
+            alert("!!!!!!!");
+            localStorage.setItem('id',data.data.user.id);
+            localStorage.setItem('token',data.data.token);
+        });
+    }
+
+    var LoginWithFacebook = function(){
+        alert("1");
+        self.ajax = function(uri, method, data){
+            var request = {
+                url: baseUrl+uri,
+                type: method,
+                async: false,
+                contentType: 'application/json',
+                accepts: 'application/json',
+                cache: false,
+                dataType: 'json',
+                data: JSON.stringify(data),
+                error:function(jqXHR){
+                    console.log("ajax error " + jqXHR.status);
+                    alert("Error!!!");
+                }
+            };
+            return $.ajax(request);
+        }
+
+        self.ajax('/login/facebook','GET').done(function(data){
+            console.log(data);
+            alert("!!!!!");
+        });
+    }
+    </script>
+{% endblock %}

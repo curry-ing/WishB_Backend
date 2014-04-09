@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        {% if title %}
+            <title>{{title}} - DreamProj.</title>
+        {% else %}
+            <title>Dream Project</title>
+        {% endif %}
+
+        <!-- Bootstrap core CSS -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <!-- Custom styles for this template -->
+		<link rel="stylesheet" href="{{ url_for('.static', filename = 'css/mokcha.css') }}">
+
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script src="{{ url_for('.static', filename='js/jquery.base64.js') }}"></script>
+
+        <!-- Just for debugging purposes. Don't actually copy this line! -->
+        <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+        <script>
+            $(document).ready(function(){
+                GetContents();
+            });
+
+            var GetContents = function(){
+                $.ajax({
+                    url: '/api/bucket/'+{{ id }},
+                    type: 'GET',
+                    beforeSend: function(xhr){
+                        var hash = $.base64.encode(localStorage.getItem('token') + ':unused');
+                        xhr.setRequestHeader("Authorization", "Basic " + hash);
+                    },
+                    success: function(data){
+                        fillContents(data.data);
+                    },
+                    error: function(jqXHR){
+                        console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                        return false;
+                    }
+                });
+            }
+
+            var fillContents = function(data){
+                console.log(data);
+                $('#bookTitle').html(data.title);
+                $('#bookDesc').html(data.description);
+                $('.bookCoverImg').css('background-image', 'url(' + data.cvr_img_url + ')');
+            }
+        </script>
+    </head>
+
+    <body>
+
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+{#                    <li class="active"><a href="#">Home</a></li>#}
+{#                    <li><a href="#">About</a></li>#}
+                    <li><a href="{{ url_for('register') }}">가입하기</a></li>
+                </ul>
+                <h3 class="text-muted">꿈틀<small> - {{ user.username }}님의 꿈 이야기.</small></h3>
+            </div>
+
+            <div class="bookCoverImg">
+                <div class="mokchaTitle">
+                    <h2><span id="bookTitle"></span></h2>
+                    <p class="lead" id="bookDesc"></p>
+                </div>
+            </div>
+
+            <div class="row BookTimeline">
+                <div class="col-lg-6">
+                    <h4>Subheading</h4>
+                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
+
+                    <h4>Subheading</h4>
+                    <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
+
+                    <h4>Subheading</h4>
+                    <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
+                </div>
+
+                <div class="col-lg-6">
+                    <h4>Subheading</h4>
+                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
+
+                    <h4>Subheading</h4>
+                    <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
+
+                    <h4>Subheading</h4>
+                    <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>&copy; Company 2014</p>
+            </div>
+
+        </div> <!-- /container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+  </body>
+</html>

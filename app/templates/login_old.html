@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Login</h1>
+<hr>
+<br>
+<a href=""><h3>Log in with Facebook</h3></a>
+<br>
+<h3>or Using Email/Password</h3>
+<form action="" method="post" name="login">
+    {{form.hidden_tag()}}
+    <table>
+        <tr>
+            <td>email</td>
+            <td>
+                {{form.email(size=24)}}
+                {% for error in form.errors.email %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td>password:</td>
+            <td>
+                {{form.password(size=24)}}
+                {% for error in form.errors.password %}
+                    <span class="help-inline">[{{error}}]</span><br>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><input type="submit" value="Log In"></td>
+        </tr>
+    </table>
+</form>
+{% endblock %}

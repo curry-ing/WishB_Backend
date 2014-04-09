@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="well">
+        <h1>Registration<small> - Dream proj.</small></h1>
+        <hr>
+        {% include "flash.html" %}
+        <form class="form-horizontal" role="form" id="registerForm" method="post">
+            <div class="form-group has-feedback" id="inputEmailGroup">
+                <label for="inputEmail" class="col-sm-2 col-sm-offset-3 control-label" id="inputEmailLabel">Email</label>
+                <div class="col-sm-4">
+                    <input type="email" name="email" class="form-control" id="inputEmail" placeholder="Email">
+                    <span class="form-control-feedback" id="inputEmailGlyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group has-feedback" id="inputPassword1Group">
+                <label for="inputPassword1" class="col-sm-2 col-sm-offset-3 control-label">Password</label>
+                <div class="col-sm-4">
+                    <input type="password" name="password" class="form-control" id="inputPassword1" placeholder="Enter Password">
+                    <span class="form-control-feedback" id="inputPassword1Glyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group has-feedback" id="inputPassword2Group">
+                <label for="inputPassword2" class="col-sm-2 col-sm-offset-3 control-label">Verify Password</label>
+                <div class="col-sm-4">
+                    <input type="password" class="form-control" id="inputPassword2" placeholder="Re-Enter Password">
+                    <span class="form-control-feedback" id="inputPassword2Glyphicon"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-5 col-sm-4">
+                    <button type="submit" class="btn btn-default disabled" id="registerBtn">Register</button>
+                    <button type="button" class="btn btn-primary" id="loginWithFacebookBtn">Log in with FACEBOOK</button>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+{% block script %}
+    <script>
+    $(document).ready(function(){
+        $.ajaxSetup({ cache: true });
+        $.getScript('//connect.facebook.net/en_UK/all.js', function(){
+            FB.init({
+              appId: '268430496627035'
+            });
+        });
+
+        CheckAuthentication();
+
+{#        $("#resetPasswdBtn").click(resetPassword);#}
+        $("#inputEmail").keyup(EmailValidation);
+        $("#inputEmail").focusout(UniqueEmail);
+        $("#inputPassword1").keyup(PasswordValidation);
+        $("#inputPassword2").keyup(VerifyPasswords);
+        $("#loginWithFacebookBtn").click(LoginWithFacebook);
+
+        $("#registerForm").submit(function() {
+            var data= $(this).serializeArray();
+            $.ajax({
+                url: '/api/users',
+                type: 'POST',
+                data: data,
+                success: function(data){
+                    localStorage.clear('id','token','email','username');
+                    localStorage.setItem('id',data.data.user.id);
+                    localStorage.setItem('token',data.data.token);
+                },
+                error:function(jqXHR){
+                    console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                    alert("Error!!!");
+                }
+            });
+            return false;
+        });
+    });
+
+    baseUrl = 'http://masunghoon.iptime.org:5001/api';
+    EmailIsUnique = false;
+
+    var EmailValidation = function(){
+        var emailAddr = $("#inputEmail").val();
+        if(IsEmail(emailAddr)){
+            $("#inputEmailGroup").attr('class','form-group has-success has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputEmailGroup").attr('class','form-group has-error has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    var UniqueEmail = function(){
+        var emailAddr = $("#inputEmail").val();
+
+        if(IsEmail(emailAddr) && IsUnusedEmail(emailAddr)){
+            $("#inputEmailGroup").attr('class','form-group has-success has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputEmailGroup").attr('class','form-group has-error has-feedback');
+            $("#inputEmailGlyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    var PasswordValidation = function(){
+        if (PasswordIsValid()) {
+            $("#inputPassword1Group").attr('class','form-group has-success has-feedback');
+            $("#inputPassword1Glyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+        } else {
+            $("#inputPassword1Group").attr('class','form-group has-error has-feedback');
+            $("#inputPassword1Glyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+        }
+    }
+
+    var VerifyPasswords = function(){
+        if(PasswordsAreSame()){
+            $("#inputPassword2Group").attr('class','form-group has-success has-feedback');
+            $("#inputPassword2Glyphicon").attr('class','glyphicon glyphicon-ok form-control-feedback');
+            CheckAllFieldsAreValidated();
+        } else {
+            $("#inputPassword2Group").attr('class','form-group has-error has-feedback');
+            $("#inputPassword2Glyphicon").attr('class','glyphicon glyphicon-remove form-control-feedback');
+            CheckAllFieldsAreValidated();
+        }
+    }
+
+    function PasswordIsValid(){
+        var password = $("#inputPassword1").val();
+        if (password.length > 5) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    var PasswordsAreSame = function(){
+        if($("#inputPassword1").val() == $("#inputPassword2").val()){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function IsEmail(email) {
+        var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+        return regex.test(email);
+    }
+
+    var IsUnusedEmail = function(email) {
+        var self = this;
+
+        self.ajax = function(uri, method, data){
+            var request = {
+                url: baseUrl+uri,
+                type: method,
+                async: false,
+                contentType: 'application/json',
+                accepts: 'application/json',
+                cache: false,
+                dataType: 'json',
+                data: JSON.stringify(data),
+                error:function(jqXHR){
+                    console.log("ajax error " + jqXHR.status);
+                }
+            };
+            return $.ajax(request);
+        }
+
+        self.ajax('/valid_email/'+email, 'GET').done(function(data){
+            console.log("SUCCESS");
+            if(data.code == '1'){
+                console.log('1:'+data.description);
+                EmailIsUnique =  true;
+            } else {
+                console.log('0:'+data.description);
+                EmailIsUnique = false;
+            }
+        });
+        return EmailIsUnique;
+    }
+
+    var CheckAllFieldsAreValidated = function(){
+        emailAddr = $("#inputEmail").val();
+        if (IsEmail(emailAddr) && PasswordIsValid() && PasswordsAreSame() && EmailIsUnique){
+            $("#registerBtn").attr('class','btn btn-success enabled');
+        } else {
+            $("#registerBtn").attr('class','btn btn-default disabled');
+        }
+    }
+
+    var CheckAuthentication = function(){
+        if (localStorage.getItem('token')){
+            var auth_token = localStorage.getItem('token');
+            var hash = $.base64.encode(auth_token + ':unused');
+            $.ajax({
+                url: '/api/resource',
+                type: 'GET',
+                beforeSend: function(xhr){
+                    xhr.setRequestHeader("Authorization", "Basic "+hash);
+                },
+                success: function(data){
+                    localStorage.removeItem('id','email','username');
+                    localStorage.setItem('id',data.data.id);
+                    localStorage.setItem('username',data.data.username);
+                    localStorage.setItem('email',data.data.email);
+                    window.location = 'index';
+                },
+                error: function(jqXHR){
+                    console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                    alert("Authorize Error");
+                }
+            });
+        }
+    }
+
+    var LoginWithFacebook = function(){
+        FB.login(function(response) {
+            if (response.authResponse) {
+                var accessToken = response.authResponse.accessToken;
+                var hash = $.base64.encode(accessToken + ':facebook');
+                localStorage.removeItem('fbAccessToken');
+                localStorage.setItem('fbAccessToken',accessToken);
+                $.ajax({
+                    url: '/api/token',
+                    type: 'GET',
+                    beforeSend: function(xhr){
+                        xhr.setRequestHeader("Authorization", "Basic "+hash);
+                    },
+                    success: function(data){
+                        localStorage.removeItem('id','token','email','username');
+                        localStorage.setItem('id',data.data.user.id);
+                        localStorage.setItem('token',data.data.token);
+                        window.location = 'index';
+                    },
+                    error:function(jqXHR){
+                        console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                        alert("Error!!!");
+                    }
+                });
+            }
+        },{scope:'email,user_birthday,user_likes,read_friendlists,read_stream,publish_actions,publish_stream'});
+    }
+    </script>
+{% endblock %}

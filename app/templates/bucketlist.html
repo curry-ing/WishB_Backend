@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block stylesheet %}
+{% endblock %}
+{% block content %}
+<h2><img src="{{user.avatar(48)}}" class="img-polaroid"><b> {{user.username}}'s Bucket Lists</b></h2>
+{% include 'flash.html' %}
+<div class="col-md-2 well">
+	left
+</div>
+<div class="col-md-10">
+    <div style="margin: 10px">
+	<ul class="nav nav-pills">
+        <li class="active"><a href="#bucketAll" data-toggle="tab">Whole List</a></li>
+        <li><a href="#bucketDecade" data-toggle="tab">for a Lifetime</a></li>
+        <li><a href="#bucketYearly" data-toggle="tab">for this Year</a></li>
+        <li><a href="#bucketMonthly" data-toggle="tab">for this Month</a></li>
+        <li><a href="#bucketWeekly" data-toggle="tab">Today's List</a></li>
+    </ul>
+    </div>
+    <div id="bucketMain" class="tab-content">
+      <div id="bucketAll" class="tab-pane fade in active">
+        <table class="table table-striped">
+            <tr>
+                <td style="width: 10%;"></td>
+                <td style="width: 55%;"><b>Task</b></td>
+                <td style="width: 15%;"><b>Due-Date</b></td>
+                <td style="width: 20%;"><b>Options</b></td>
+            </tr>
+            <!-- ko foreach: tasks -->
+            <tr>
+                <td>
+                    <span data-bind="visible: done" class="label label-success">Done</span>
+                    <span data-bind="visible: !done()" class="label label-danger">In Progress</span>
+                </td>
+                <td><a data-bind="attr: {href: detailUri}">
+						<b data-bind="text: title"></b>
+					</a>
+					<p data-bind="text: description"></p>
+				</td>
+                <td><span data-bind="text: deadline"></span></td>
+                {% if g.user == user %}
+                <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm">
+    						<span class="glyphicon glyphicon-unchecked"></span>
+    					</button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm">
+                        	<span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% else %}
+                 <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            <!-- /ko -->
+        </table>
+        <button data-bind="click: beginAdd" class="btn btn-primary">Add Task</button>
+      </div><!-- div: bucketAll -->
+      <div id="bucketDecade" class="tab-pane fade">
+        <table class="table table-striped">
+            <tr>
+                <td style="width: 10%;"></td>
+                <td style="width: 55%;"><b>Task</b></td>
+                <td style="width: 15%;"><b>Due-Date</b></td>
+                <td style="width: 20%;"><b>Options</b></td>
+            </tr>
+            <!-- ko foreach: bucketDecade -->
+            <tr>
+                <td>
+                    <span data-bind="visible: done" class="label label-success">Done</span>
+                    <span data-bind="visible: !done()" class="label label-danger">In Progress</span>
+                </td>
+                <td><a data-bind="attr: {href: detailUri}">
+                        <b data-bind="text: title"></b>
+                    </a>
+                    <p data-bind="text: description"></p>
+                </td>
+                <td><span data-bind="text: deadline"></span></td>
+                {% if g.user == user %}
+                <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% else %}
+                 <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            <!-- /ko -->
+        </table>
+        <button data-bind="click: beginAdd" class="btn btn-primary">Add Task</button>
+      </div><!-- addBucketDecade -->
+      <div id="bucketYearly" class="tab-pane fade">
+        <table class="table table-striped">
+            <tr>
+                <td style="width: 10%;"></td>
+                <td style="width: 55%;"><b>Task</b></td>
+                <td style="width: 15%;"><b>Due-Date</b></td>
+                <td style="width: 20%;"><b>Options</b></td>
+            </tr>
+            <!-- ko foreach: bucketYearly -->
+            <tr>
+                <td>
+                    <span data-bind="visible: done" class="label label-success">Done</span>
+                    <span data-bind="visible: !done()" class="label label-danger">In Progress</span>
+                </td>
+                <td><a data-bind="attr: {href: detailUri}">
+                        <b data-bind="text: title"></b>
+                    </a>
+                    <p data-bind="text: description"></p>
+                </td>
+                <td><span data-bind="text: deadline"></span></td>
+                {% if g.user == user %}
+                <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% else %}
+                 <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            <!-- /ko -->
+        </table>
+        <button data-bind="click: beginAdd" class="btn btn-primary">Add Task</button>
+      </div><!-- addBucketYearly -->
+      <div id="bucketMonthly" class="tab-pane fade">
+        <table class="table table-striped">
+            <tr>
+                <td style="width: 10%;"></td>
+                <td style="width: 55%;"><b>Task</b></td>
+                <td style="width: 15%;"><b>Due-Date</b></td>
+                <td style="width: 20%;"><b>Options</b></td>
+            </tr>
+            <!-- ko foreach: bucketMonthly -->
+            <tr>
+                <td>
+                    <span data-bind="visible: done" class="label label-success">Done</span>
+                    <span data-bind="visible: !done()" class="label label-danger">In Progress</span>
+                </td>
+                <td><a data-bind="attr: {href: detailUri}">
+                        <b data-bind="text: title"></b>
+                    </a>
+                    <p data-bind="text: description"></p>
+                </td>
+                <td><span data-bind="text: deadline"></span></td>
+                {% if g.user == user %}
+                <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% else %}
+                 <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            <!-- /ko -->
+        </table>
+        <button data-bind="click: beginAdd" class="btn btn-primary">Add Task</button>
+      </div><!-- addBucketMonthly -->
+      <div id="bucketWeekly" class="tab-pane fade">
+        <table class="table table-striped">
+            <tr>
+                <td style="width: 10%;"></td>
+                <td style="width: 55%;"><b>Task</b></td>
+                <td style="width: 15%;"><b>Due-Date</b></td>
+                <td style="width: 20%;"><b>Options</b></td>
+            </tr>
+            <!-- ko foreach: bucketWeekly -->
+            <tr>
+                <td>
+                    <span data-bind="visible: done" class="label label-success">Done</span>
+                    <span data-bind="visible: !done()" class="label label-danger">In Progress</span>
+                </td>
+                <td><a data-bind="attr: {href: detailUri}">
+                        <b data-bind="text: title"></b>
+                    </a>
+                    <p data-bind="text: description"></p>
+                </td>
+                <td><span data-bind="text: deadline"></span></td>
+                {% if g.user == user %}
+                <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% else %}
+                 <td>
+                    <button data-bind="click: $parent.beginEdit" class="btn btn-default btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                    <span data-bind="visible: done">
+                        <button data-bind="click: $parent.markInProgress" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-unchecked"></span>
+                        </button>
+                    </span>
+                    <span data-bind="visible: !done()">
+                        <button data-bind="click: $parent.markDone" class="btn btn-success btn-sm" disabled="disabled">
+                            <span class="glyphicon glyphicon-check"></span>
+                        </button>
+                    </span>
+                    <button data-bind="click: $parent.remove" class="btn btn-danger btn-sm" disabled="disabled">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            <!-- /ko -->
+        </table>
+        <button data-bind="click: beginAdd" class="btn btn-primary">Add Task</button>
+      </div><!-- addBucketWeekly -->
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="addBucket" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="addLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 id="addDialogLabel">Add Task</h3>
+        </div>
+        <div class="modal-body">
+            <form role="form">
+                <div class="form-group">
+                    <label for="Task_Title">Bucket Name</label>
+                    <input data-bind="value: title" type="text" class="form-control" id="inputBucketTitle" placeholder="Enther Bucket Title here">
+                    <label for="Description">Description</label>
+                    <textarea data-bind="value: description" class="form-control" id="inputBucketDesc" rows="3"></textarea>
+                    <label class="checkbox">
+                        <input data-bind="checked: private" type="checkbox"> Private
+                    </label>
+                    <label class="checkbox">
+                        <input data-bind="checked: done" type="checkbox"> Done
+                    </label>
+                    <table style="width:100%;">
+                        <tr>
+                            <td style="width: 35%;">
+                                <select class="form-control" data-bind='options: sampleProductCategories, optionsText: "name", optionsCaption: "Select...", value: category'> </select>
+                            </td>
+                            <td data-bind="with: category" style="width:35%;">
+                                <select class="form-control" data-bind='options: products, optionsText: "range", optionsCaption: "Select...", value: $parent.product'> </select>
+                            </td>
+                            <td class='price' data-bind='with: product' style="width:30%;">
+                                <div class="form-group">
+                                    <div class='input-group date' id='datetimepicker5'>
+                                        <input data-bind="value: dueDate" type='text' class="form-control" data-format="YYYY/MM/DD" />
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-time"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <script type="text/javascript">
+                                    $(function () {
+                                        $('#datetimepicker5').datetimepicker({
+                                            pickTime: false
+                                        });
+                                    });
+                                </script>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button data-bind="click: addTask" class="btn btn-primary">Add Task</button>
+            <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+        </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="editBucket" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="addLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 id="editDialogLabel">Edit Task</h3>
+        </div>
+        <div class="modal-body">
+            {% include 'single_bucket.html' %}
+        </div>
+        <div class="modal-footer">
+            <button data-bind="click: editTask" class="btn btn-primary">Edit Task</button>
+            <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+        </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('.static', filename = 'js/bucket.js') }}"></script>
+<script>
+// $('.done-yn').tooltip('toggle');
+$(function () {
+    $('.datepicker').datetimepicker({
+        pickTime: false
+    });
+});
+
+var tasksViewModel = new TasksViewModel('{{ user.username }}');
+var addTaskViewModel = new AddTaskViewModel();
+var editTaskViewModel = new EditTaskViewModel();
+ko.applyBindings(addTaskViewModel, $('#addBucket')[0]);
+ko.applyBindings(editTaskViewModel, $('#editBucket')[0]);
+ko.applyBindings(tasksViewModel, $('#BucketMain')[0]);
+alert("Apply Binding Done!!");
+</script>
+{% endblock %}

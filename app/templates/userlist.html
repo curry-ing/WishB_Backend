@@ -1,0 +1,30 @@
+<table class="table table-striped">
+	<thead>
+		<tr>
+			<td colspan='3'><h3><b>Member List!</b></h3></td>
+		</tr>
+	</thead>
+	<tbody>
+		<!-- ko foreach: users -->
+		<tr>
+			<td data-bind="html: pic" rowspan="2" style="width: 20%"></td>
+			<td style="width: 60%"><b>
+				<a data-bind="attr: {href: Url}">
+					<span data-bind="text: username"></span>
+				</a>
+			</b></td>
+			<td style="width: 20%" rowspan="2">
+				<span data-bind="visible: following">
+					<a data-bind="attr: {href: unfollowuser}" class="btn btn-danger btn-sm" role="button">Unfollow</a>
+				</span>
+				<span data-bind="visible: !following()">
+					<a data-bind="attr: {href: followuser}" class="btn btn-primary btn-sm" role="button">Follow</a>
+				</span>
+			</td>
+		</tr>
+		<tr>
+			<td data-bind="text: aboutme"></td>
+		</tr>
+		<!-- /ko -->
+	</tbody>
+</table>

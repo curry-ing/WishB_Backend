@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block scripts %}
+    <script>
+    $(document).ready(function(){
+        $.ajaxSetup({ cache: true });
+        $.getScript('//connect.facebook.net/en_UK/all.js', function(){
+            FB.init({
+              appId: '268430496627035'
+            });
+        });
+
+        CheckAuthentication();
+        $("#loginWithFacebookBtn").click(LoginWithFacebook);
+        $("#loginWithEmailBtn").click(LoginWithEmail);
+    });
+
+    var CheckAuthentication = function(){
+        if (localStorage.getItem('token')){
+            var auth_token = localStorage.getItem('token');
+            var hash = $.base64.encode(auth_token + ':unused');
+            $.ajax({
+                url: '/api/resource',
+                type: 'GET',
+                beforeSend: function(xhr){
+                    xhr.setRequestHeader("Authorization", "Basic "+hash);
+                },
+                success: function(data){
+                    localStorage.removeItem('id','email','username');
+                    localStorage.setItem('id',data.data.id);
+                    localStorage.setItem('username',data.data.username);
+                    localStorage.setItem('email',data.data.email);
+                    window.location = 'index';
+                },
+                error: function(jqXHR){
+                    console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                    alert("Authorize Error");
+                }
+            });
+        }
+    }
+
+    var LoginWithEmail = function(){
+        $.ajax({
+            url: '/api/token',
+            type: 'GET',
+            beforeSend: function(xhr){
+                var tok = $("#inputEmail").val() + ":" + $("#inputPassword").val();
+                var hash = $.base64.encode(tok);
+                xhr.setRequestHeader("Authorization", "Basic "+hash);
+            },
+            success: function(data){
+                localStorage.removeItem('id','token','email','username');
+                localStorage.setItem('id',data.data.user.id);
+                localStorage.setItem('email',data.data.user.email);
+                localStorage.setItem('username',data.data.user.username);
+                localStorage.setItem('token',data.data.token);
+                window.location = 'index';
+            },
+            error: function(jqXHR){
+                console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                localStorage.removeItem('id','token','email','username');
+            }
+        });
+    }
+
+    var LoginWithFacebook = function(){
+        FB.login(function(response) {
+            if (response.authResponse) {
+                var accessToken = response.authResponse.accessToken;
+                var hash = $.base64.encode(accessToken + ':facebook');
+                localStorage.removeItem('fbAccessToken');
+                localStorage.setItem('fbAccessToken',accessToken);
+                $.ajax({
+                    url: '/api/token',
+                    type: 'GET',
+                    beforeSend: function(xhr){
+                        xhr.setRequestHeader("Authorization", "Basic "+hash);
+                    },
+                    success: function(data){
+                        localStorage.removeItem('id','token','email','username');
+                        localStorage.setItem('id',data.data.user.id);
+                        localStorage.setItem('email',data.data.user.email);
+                        localStorage.setItem('username',data.data.user.username);
+                        localStorage.setItem('token',data.data.token);
+                        window.location = 'index';
+                    },
+                    error:function(jqXHR){
+                        console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                        alert("Error!!!");
+                    }
+                });
+            }
+        },{scope:'email,user_birthday,user_likes,read_friendlists,read_stream,publish_actions,publish_stream'});
+    }
+
+    </script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <h1>Login<small> - Dream proj.</small></h1>
+        <hr>
+        {% include "flash.html" %}
+        <form class="form-inline" role="form" id="loginForm">
+            <div class="form-group">
+                <label class="sr-only" for="inputEmail">Email address</label>
+                <input type="email" class="form-control" id="inputEmail" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label class="sr-only" for="inputPassword">Password</label>
+                <input type="password" class="form-control" id="inputPassword" placeholder="Password">
+            </div>
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox"> Remember me
+                </label>
+            </div>
+            <button type="button" class="btn btn-default" id="loginWithEmailBtn">Log in</button>
+            <button type="button" class="btn btn-primary" id="loginWithFacebookBtn">Log in with FACEBOOK</button>
+        </form>
+    </div>
+{% endblock %}
+{% block script %}
+
+{% endblock %}

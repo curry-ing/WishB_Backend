@@ -1,0 +1,42 @@
+# Korean translations for PROJECT.
+# Copyright (C) 2013 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2013-11-19 10:14+0900\n"
+"PO-Revision-Date: 2013-11-19 10:19+0900\n"
+"Last-Translator: Ma Sunghoon <masunghoon@gmail.com>\n"
+"Language-Team: ko <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 1.3\n"
+"X-Generator: Poedit 1.5.7\n"
+
+#: app/forms.py:23
+msgid ""
+"This username has invalid characters. Please use letters, numbers, dots and "
+"undersocres only."
+msgstr "문자, 숫자, 마침표, 언더라인만 허용됩니다."
+
+#: app/forms.py:27
+msgid "This username is aleady in use. Please choose another one."
+msgstr "이미 사용중인 이름입니다. "
+
+#: app/views.py:65
+msgid "Invalid login. Please try again."
+msgstr "로그인 오류. 다시 시도해 주세요."
+
+#: app/templates/base.html:30
+msgid "Home"
+msgstr "홈으로"
+
+#: app/templates/post.html:6
+#, python-format
+msgid "%(username)s said %(when)s | %(when2)s:"
+msgstr ""

@@ -1,0 +1,658 @@
+{% extends 'base.html' %}
+{% block stylesheet %}
+<style type="text/css">
+body {
+    background-color: lightgrey;
+}
+* {
+    border-style: solid;
+    border-width: 0px;
+}
+
+.white, .white a {
+  color: #fff;
+}
+
+.row {
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.left {
+    background-color: lightcyan;
+}
+.right {
+}
+
+.bucketListField{
+    padding-left: 0px;
+    padding-right: 0px;
+}
+.bucketContainer, .subBucketContainer{
+    margin: 0px;
+    padding: 2px 0px;
+}
+
+.bucketContainer:hover{
+}
+
+.bucketContainer:hover .bucketPic{
+    -webkit-filter: blur(0px);
+}
+
+.dateDivider{
+    height: 35px;
+    line-height: 35px;
+    font-size: 16px;
+    color: white;
+    font-height: 30px;
+    background-color: #808080;
+    padding-left: 10px;
+    margin-bottom: 2px;
+}
+
+.bucketSummary{
+    background-color: #fff;
+    height: 120px;
+}
+
+.bucketTitle,
+.editBucketTitle input{
+    height: 30px;
+    line-height: 30px;
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.editBucketTitle button{
+    height: 30px;
+    line-height: 30px;
+    margin-top: 10px;
+    padding-top: 0px;
+}
+
+.editBucketTitle span{
+
+}
+
+.bucketTitle .label{
+    font-size: 60%;
+}
+
+.editBucketTitle input{
+    font-weight: bold;
+    padding-left: 3px;
+}
+
+.bucketDue{
+    height: 30px;
+}
+
+.bucketProgress{
+    margin-bottom: 10px;
+    height: 10px;
+}
+
+.bucketProgress .progress-bar{
+    font-size:10px;
+    line-height: 10px;
+}
+
+.bktDtlCollapseTglBtn{
+    float: right;
+    font-size: 18px;
+}
+
+.socialControls{
+    height: 30px;
+}
+
+.bucketExtArea{
+    background-color: #ffffff;
+}
+
+.bucketDescription,
+.addBucketDescriptionBtn,
+.editBucketDescription,
+.bucketTodoList,
+.bucketSocialArea{
+    padding: 5px 10px;
+    font-size:13px;
+}
+
+.bucketDescription .bucketDescriptionText,
+.addBucketDescriptionBtn,
+.editBucketDescription .editBucketDescriptionText,
+.bucketTodoList .bucketTodoListText,
+.bucketSocialArea .bucketSocialAreaText{
+    font-size: 14px;
+    font-weight: bold;
+    margin:0px 0px 5px 0px;
+}
+
+.editBucketDescriptionControls{
+    margin: 5px 0px;
+}
+
+.editBucketDescriptionSave,
+.editBucketDescriptionCancel{
+    float: right;
+    margin-left: 5px;
+}
+
+.bucketDescription .well,
+.bucketSocialArea .well{
+    padding: 5px 10px;
+    margin: 0px 5px 0px 10px;
+}
+
+.bucketDescription>.well:hover{
+    cursor: hand;
+}
+
+.editBucketDescription .editBucketDescriptionContents {
+    padding: 0;
+    margin: 0px 5px 0px 10px;
+}
+
+.bucketSocialArea .well ul{
+    margin: 0px 0px;
+    padding-left: 20px;
+}
+
+.bucketTodoList .todos{
+    margin: 2px 5px 2px 10px;
+}
+
+.bucketTodoList .addBucketTodoGroup {
+    margin: 0px 5px 2px 10px;
+}
+
+.bucketTodoList .addBucketTodoBtn {
+{#    float: left;#}
+}
+
+.bucketSocialArea{
+    height: 100px;
+}
+
+.bucketPic{
+    height: 120px;
+    background-position: center center;
+    background-size: 100% auto;
+    -webkit-filter: blur(2px);
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.bucketPic.well,
+.inputBucketPic.well{
+    padding: 0px;
+    margin: 0px;
+}
+
+.bucketPic:hover>.bucketControls,
+.inputBucketPic:hover>.inputBucketControls{
+    opacity: 0.9;
+    -webkit-transition: all 0.2s ease-in-out;
+}
+
+.subBucketConnection {
+    height: 120px;
+}
+
+.bucketImg img{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.bucketControls,
+.inputBucketControls{
+    position: absolute;
+    opacity: 0.2;
+    -webkit-transition: all 0.2s ease-in-out;
+}
+
+.inputBucketTitle{
+    margin-top: 10px;
+    height: 40px
+}
+
+.inputBucketPic{
+    height: 120px;
+}
+
+.inputBucketScope {
+    padding-left:0px;
+    padding-right:10px;
+}
+
+.inputBucketRange{
+    padding-left:10px;
+    padding-right:0px;
+}
+
+.inputBucketDetailControls{
+    margin-top: 5px;
+}
+
+.inputDescBtn{
+    float: right;
+}
+
+#timeline{
+    background-color: darkgrey;
+}
+
+</style>
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-3 left">
+            left
+        </div>
+        <div class="col-md-9 right">
+            <div class="row">
+                <div class="col-xs-10 bucketListField" id="bucketListMain">
+                    <div class="dateDivider">
+                        30대 - 2023년 9월 7일까지.
+                    </div>
+                    <!-- ko foreach:buckets -->
+                    <div class="bucketContainer" id="accordion">
+                        <div class="row">
+                            <div class="col-sm-7 bucketSummary">
+
+                                <div class="bucketTitle" data-bind="visible: !editBktTitleStat()">
+                                        <span class="bucketTitleText" data-bind="text: title, click: editBktTitle">Bucket Title Here</span>
+                                        <span class="label label-danger" data-bind="visible: is_private">Private</span>
+                                </div>
+                                <div class="editBucketTitle" data-bind="visible: editBktTitleStat">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" data-bind="value: title, event:{focusout: editBktTitle}" autofocus>
+                                        <span class="input-group-btn" data-bind="click: editBktPrivTgl, value: is_private">
+                                            <button data-bind="attr:{class: editBktPrivTglBtn, 'data-original-title': editBktPrivTooltip}" data-toggle="tooltip" data-placement="left" data-container="body" title type="button">
+                                                <span data-bind="attr:{class: editBktPrivTglSpan}"></span>
+                                            </button>
+                                        </span>
+                                    </div><!-- /input-group -->
+                                </div>
+
+                                <div class="bucketDue">
+                                    Due: <span data-bind="text: deadline">2020-12-31</span> & Remains: <span data-bind="text: remainDays">3754</span>days
+                                </div>
+                                <div class="progress progress-striped active bucketProgress">
+                                  <div class="progress-bar progress-bar-primary" role="progressbar" data-bind="attr: {'aria-valuenow': todoProgress(), 'style':'width:'+todoProgress().split('%',1)+'%'}" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+                                    <span class="" data-bind="text: todoProgress()">60% Complete</span>
+                                  </div>
+                                </div>
+                                <div class="socialControls">
+                                    <button class="btn btn-xs btn-default"><span class="glyphicon glyphicon-thumbs-up"> Like</span></button>
+                                    <button class="btn btn-xs btn-default btnComment"><span class="glyphicon glyphicon-pencil" onclick="showComments()"> Comments</span></button>
+                                    <a class="bktDtlCollapseTglBtn" data-toggle="collapse" data-parent="#accordion" data-bind="attr:{href:'#'+id()}, click:bktDtlCollapseToggle">
+                                        <span data-bind="attr:{class:bktDtlCollapseTglSpan}"></span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-5 bucketPic">
+                                <div class="bucketImg"><img src="/static/media/mini.png" width="100%" height="100%"></div>
+                                <div class="bucketControls">
+                                    <button class="btn btn-primary bktDoneBtn"><span class="glyphicon glyphicon-ok"></span></button>
+                                    <button class="btn btn-success bktShareBtn"><span class="glyphicon glyphicon-share-alt"></span></button>
+                                    <button class="btn btn-danger bktDelBtn" data-bind="click: $parent.remove"><span class="glyphicon glyphicon-trash"></span></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bucketExtArea collapse" data-bind="attr:{'id':id}">
+                            <div class="bucketDescription">
+                                <span class="bucketDescriptionText">Description</span>
+                                <button class="btn btn-default btn-xs" data-bind="click: editBucketDesc, visible: !description && !editDescStat()">
+                                    <span class="glyphicon glyphicon-pencil"></span> Edit <b>Description</b>
+                                </button>
+                                <div class="well" data-bind="visible: description && !editDescStat(), text: description, click: editBucketDesc, attr:{'id':'bucketDesc'+id}">
+                                    - Mission: Manual
+                                    - Color: Red or Blue
+                                </div>
+                            </div>
+                            <div class="editBucketDescription" data-bind="visible: editDescStat">
+                                <div class="editBucketDescriptionContents">
+                                    <textarea class="form-control" data-bind="value: description, hasFocus: editDescStat(), event: {focusout: saveDesc}" ></textarea>
+                                    <div class="editBucketDescriptionControls row">
+                                        <button class="btn btn-primary btn-sm editBucketDescriptionSave">Save</button>
+                                        <button class="btn btn-danger btn-sm editBucketDescriptionCancel">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bucketTodoList">
+                                <span class="bucketTodoListText">To-do Lists</span>
+                                <button data-bind="attr:{'class':addBucketTodoBtn}, click: addBktTodoCtrlToggle">
+                                    <span class="glyphicon glyphicon-plus"></span> Add Todo
+                                </button>
+                                <!-- ko foreach:bucketTodos -->
+                                <div class="todos">
+                                    <button class="btn btn-xs btn-default">
+                                        <span class="glyphicon glyphicon-ok" data-bind="visible: !todoIsLive"></span>
+                                        <span class="glyphicon glyphicon-ok white" data-bind="visible: todoIsLive"></span>
+                                    </button><span data-bind="text: todoTitle">Todo Bucket Title</span>
+                                </div>
+                                <!-- /ko -->
+                                <div class="input-group input-group-sm addBucketTodoGroup" data-bind="visible: addBktTodoCtrl">
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-remove" data-bind="click: addBktTodoCtrlToggle"></span>
+                                    </span>
+                                    <input type="text" class="form-control">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" type="button">
+                                            <span class="glyphicon glyphicon-pencil"></span> Save
+                                        </button>
+                                    </span>
+                                </div><!-- /input-group -->
+                            </div>
+                            <div class="bucketSocialArea">
+                                <span class="bucketSocialAreaText">Social Area</span>
+                                <div class="well">
+                                    <ul>
+                                        <li>Comments</li>
+                                        <li>Likes</li>
+                                        <li>And so on....</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /ko -->
+
+                    <div class="bucketContainer">
+                        <div class="row">
+                            <div class="col-xs-1 subBucketConnection"></div>
+                            <div class="col-xs-11 subBucketContainer">
+                                <div class="row">
+                                    <div class="col-sm-7 bucketSummary">
+                                        <div class="bucketTitle">
+                                            <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">
+                                                <span class="bucketTitleText">BMW Mini Convertable</span></a>
+                                                <span class="label label-danger">Private</span>
+                                        </div>
+                                        <div class="bucketDue">
+                                            Due: 2020-12-31 & Remains: 3754days
+                                        </div>
+                                        <div class="progress progress-striped active bucketProgress">
+                                          <div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="width: 20%;">
+                                          </div>
+                                        </div>
+                                        <div class="socialControls">
+                                            <button class="btn btn-xs btn-default"><span class="glyphicon glyphicon-thumbs-up"></span> Like</button>
+                                            <button class="btn btn-xs btn-default btnComment"><span class="glyphicon glyphicon-pencil" onclick="showComments()"></span> Comments</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-5 bucketPic well">
+                                        <div class="bucketControls">
+                                            <button class="btn btn-primary bktDoneBtn"><span class="glyphicon glyphicon-ok"></span></button>
+                                            <button class="btn btn-success bktShareBtn"><span class="glyphicon glyphicon-share-alt"></span></button>
+                                            <button class="btn btn-danger bktDelBtn" data-bind="click: $root.remove"><span class="glyphicon glyphicon-trash"></span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="collapseTwo" class="bucketExtArea collapse">
+                                    <div class="bucketDescription">
+                                        <span class="bucketDescriptionText">Description</span>
+                                        <div class="well">
+                                            - Mission: Manual
+                                            - Color: Red or Blue
+                                        </div>
+                                    </div>
+                                    <div class="bucketTodoList">
+                                        <span class="bucketTodoListText">To-do Lists</span>
+                                        <div class="todos"><button class="btn btn-xs btn-default"><span class="glyphicon glyphicon-ok"></span></button> Todo List Done</div>
+                                        <div class="todos"><button class="btn btn-xs btn-default"><span class="glyphicon glyphicon-ok white"></span></button> Todo List Undone</div>
+                                    </div>
+                                    <div class="bucketSocialArea">
+                                        <span class="bucketSocialAreaText">Social Area</span>
+                                        <div class="well">
+                                            <ul>
+                                                <li>Comments</li>
+                                                <li>Likes</li>
+                                                <li>And so on....</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bucketContainer">
+                        <div class="row">
+                            <div class="col-sm-7 bucketSummary">
+                                <div class="inputBucketTitle">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" placeholder="Enter Bucket Title here">
+                                        <span class="input-group-btn" data-bind="click: toggleBktPrivate">
+                                            <button data-bind="attr:{class: bucketPrivBtn, 'data-original-title': bucketPrivTooltip}" data-toggle="tooltip" data-placement="left" data-container="body" title type="button">
+                                                <span data-bind="attr:{class: bucketPrivGlyphicon}"></span>
+                                            </button>
+                                        </span>
+                                    </div><!-- /input-group -->
+                                </div>
+                                <div class="inputBktDue row">
+                                    <div class="inputBucketScope col-md-5">
+                                    <select class="form-control" data-bind="options: userDday, optionsText: 'range', value: userDueRange">
+                                    </select>
+                                    </div>
+                                    <div class="inputBucketRange col-md-7" data-bind="with: userDueRange">
+                                        <input type="date" class="form-control" data-bind="value: userDueDate" disabled>
+                                    </div>
+                                </div>
+                                <div class="inputBucketDetailControls">
+                                    <button class="btn btn-success btn-xs inputDescBtn" data-bind="enable: inputBktFormFilled"><span class="glyphicon glyphicon-save"></span> Save <b>Bucket</b></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-5 inputBucketPic well">
+                                <div class="inputBucketControls">
+                                    <button class="btn btn-primary inputPicBtn"><span class="glyphicon glyphicon-picture"> Picture</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="col-xs-2" id="timeline">
+                    t<br>i<br>m<br>e<br>l<br>i<br>n<br>e<br>
+                    t<br>i<br>m<br>e<br>l<br>i<br>n<br>e<br>
+                    t<br>i<br>m<br>e<br>l<br>i<br>n<br>e<br>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.bucketPrivateBtn').tooltip();
+});
+
+function BucketViewModel(username){
+    var self = this;
+    var bucketsModel;
+
+
+    self.bucketURI = '/api/users/'+username+'/buckets';
+
+    self.buckets = ko.observableArray();
+    self.userDday = ko.observableArray();
+
+
+    self.inputBktPrivBtn = ko.observable(false);
+    self.inputBktFormFilled = ko.observable(false);
+    self.inputBktTitle = ko.observable();
+    self.inputBktScope = ko.observable();
+
+    self.bucketPrivBtn = ko.observable('btn btn-default bucketPrivateBtn');
+    self.bucketPrivTooltip = ko.observable('Marked as Public');
+    self.bucketPrivGlyphicon = ko.observable('glyphicon glyphicon-eye-open');
+
+    self.userDueRange = ko.observable();
+    self.userDueDate = ko.observable();
+
+    bucketsModel = function(buckets) {
+        self.buckets(ko.utils.arrayMap(buckets, function (bucket) {
+            var newBucket = new BucketList(bucket, username);
+            return newBucket;
+        }));
+    };
+
+    self.ajax = function(uri, method, data){
+        var request = {
+            url: uri,
+            type: method,
+            contentType: "application/json",
+            accepts: "application/json",
+            cache: false,
+            dataType: 'json',
+            data: JSON.stringify(data),
+            error: function(jqXHR) {
+                console.log("ajax error: " + jqXHR.status);
+            }
+        };
+        return $.ajax(request);
+    };
+
+    self.init = function(){
+        self.ajax(self.bucketURI, 'GET').done(function(data) {
+            bucketsModel(data);
+        });
+        self.setDueSelect();
+    };
+
+    self.toggleBktPrivate = function(){
+        self.inputBktPrivBtn(!self.inputBktPrivBtn());
+        if(self.inputBktPrivBtn()){
+            self.bucketPrivBtn('btn btn-danger active bucketPrivateBtn');
+            self.bucketPrivTooltip('Marked as Private');
+            self.bucketPrivGlyphicon('glyphicon glyphicon-eye-close')
+        } else {
+            self.bucketPrivBtn('btn btn-default bucketPrivateBtn');
+            self.bucketPrivTooltip('Marked as Public');
+            self.bucketPrivGlyphicon('glyphicon glyphicon-eye-open')
+        }
+    };
+
+    self.setDueSelect = function(){
+        self.ajax('/api/getUserDday','GET').done(function(res){
+            self.userDday(res.decade);
+        })
+    };
+
+    self.remove = function(bucket) {
+        self.uri = '/api/buckets/'+bucket.id();
+        if(confirm('Really?')){
+            self.ajax(self.uri, 'DELETE').done(function(){
+                self.buckets.remove(bucket);
+            })
+        }
+    }
+
+    self.init();
+}
+
+function BucketList(bucket, username){
+    var self = this;
+
+    self.editBktTitleStat = ko.observable(false);
+    self.editDescStat = ko.observable(false);
+    self.editBktPrivTglBtn = ko.observable('btn btn-default editBktPrivTglBtn');
+    self.editBktPrivTooltip = ko.observable('Marked as Public');
+    self.editBktPrivTglSpan = ko.observable('glyphicon glyphicon-eye-open');
+    self.editBktPrivStat = ko.observable(false);
+
+    self.addBktTodoCtrl = ko.observable(false);
+    self.addBucketTodoBtn = ko.observable('btn btn-default btn-xs addBucketTodoBtn');
+
+    self.bktDtlCollapseTglSpan = ko.observable('glyphicon glyphicon-collapse-down');
+    self.bktDtlCollapseTglStat = ko.observable(true);
+
+    self.id = ko.observable(bucket.id);
+    self.title = ko.observable(bucket.title);
+    self.description = ko.observable(bucket.description);
+    self.is_live = ko.observable(bucket.is_live);
+    self.is_private = ko.observable(bucket.is_private);
+    self.deadline = ko.observable(bucket.deadline);
+    self.scope = ko.observable(bucket.scope);
+    self.range = ko.observable(bucket.range);
+    self.detailUri = '/user/' + username + '/bucket/' + self.id;
+    self.bucketTodos = ko.observableArray(bucket.todos);
+    self.remainDays = ko.computed(function(){
+        var ONE_DAY = 1000 * 60 * 60 * 24;
+
+        var date1_ms = new Date(bucket.deadline).getTime();
+        var date2_ms = new Date().getTime();
+        var difference_ms = Math.abs(date1_ms - date2_ms);
+
+        return Math.round(difference_ms/ONE_DAY);
+    });
+    self.todoProgress = ko.computed(function(){
+        var doneCnt = 0;
+        var todoCnt = bucket.todos.length;
+        for(var i=0; i<todoCnt; i++){
+            if(bucket.todos[i].todoIsLive == 0){
+                doneCnt++;
+            }
+        }
+        if(todoCnt == 0){
+            return "0% Done";
+        } else {
+            return (doneCnt/todoCnt).toFixed(2) * 100 + '% (' + doneCnt + '/' + todoCnt + ')';
+        }
+    });
+
+    self.editBucketDesc = function(){
+        self.editDescStat(!self.editDescStat());
+    };
+
+    self.saveDesc = function(){
+        self.editDescStat(!self.editDescStat());
+    };
+
+    self.editBktTitle = function(){
+        self.editBktTitleStat(!self.editBktTitleStat());
+    };
+
+    self.editBktPrivTgl = function(){
+        self.editBktPrivStat(!self.editBktPrivStat());
+        if(self.editBktPrivStat()){
+            self.editBktPrivTglBtn('btn btn-default editBktPrivTglBtn');
+            self.editBktPrivTooltip('Marked as Public');
+            self.editBktPrivTglSpan('glyphicon glyphicon-eye-open');
+        } else {
+            self.editBktPrivTglBtn('btn btn-danger editBktPrivTglBtn');
+            self.editBktPrivTooltip('Marked as Private');
+            self.editBktPrivTglSpan('glyphicon glyphicon-eye-close');
+        }
+    }
+
+    self.addBktTodoCtrlToggle = function(){
+        self.addBktTodoCtrl(!self.addBktTodoCtrl());
+        if(self.addBktTodoCtrl()){
+            self.addBucketTodoBtn('btn btn-default btn-xs disabled addBucketTodoBtn');
+        } else {
+            self.addBucketTodoBtn('btn btn-default btn-xs addBucketTodoBtn');
+        }
+    };
+
+    self.bktDtlCollapseToggle = function(){
+        self.bktDtlCollapseTglStat(!self.bktDtlCollapseTglStat());
+        if(self.bktDtlCollapseTglStat()){
+            self.bktDtlCollapseTglSpan('glyphicon glyphicon-collapse-down');
+        } else {
+            self.bktDtlCollapseTglSpan('glyphicon glyphicon-collapse-up');
+        }
+    };
+}
+
+var bucketViewModel = new BucketViewModel('{{ user.username }}');
+ko.applyBindings(bucketViewModel,$('#BucketListMain')[0]);
+</script>
+{% endblock %}
