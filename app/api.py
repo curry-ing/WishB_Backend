@@ -611,6 +611,10 @@ class UserBucketAPI(Resource):
             else:
                 level = int(b.level) + 1
 
+        if params['rpt_type'] not in ['WKRP','WEEK','MNTH']:
+            return {'status':'error',
+                    'description':'Invalid repeat-type value'}, 400
+
         if 'rpt_cndt' in params:
             dayOfWeek = datetime.date.today().weekday()
             if params['rpt_type'] == 'WKRP':
