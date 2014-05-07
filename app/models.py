@@ -47,6 +47,13 @@ class User(db.Model, UserMixin):
     active = db.Column(db.Boolean(), default=0)
     confirmed_at = db.Column(db.DateTime())
     key = db.Column(db.String(128))
+    title_life = db.Column(db.String(128))
+    title_10 = db.Column(db.String(128))
+    title_20 = db.Column(db.String(128))
+    title_30 = db.Column(db.String(128))
+    title_40 = db.Column(db.String(128))
+    title_50 = db.Column(db.String(128))
+    title_60 = db.Column(db.String(128))
     followed = db.relationship('User',
         secondary = followers, 
         primaryjoin = (followers.c.follower_id == id), 

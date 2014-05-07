@@ -161,6 +161,13 @@ user_fields = {
     'is_following': fields.Boolean,
     'pic': fields.String,
     'uri': fields.Url('user'),
+    'title_life': fields.String,
+    'title_10': fields.String,
+    'title_20': fields.String,
+    'title_30': fields.String,
+    'title_40': fields.String,
+    'title_50': fields.String,
+    'title_60': fields.String
 }
 
 class UserAPI(Resource):
@@ -222,7 +229,7 @@ class UserAPI(Resource):
                     return {'error':'Username cannot be blank'}, 400
 
 
-            elif key not in ['about_me']:
+            elif key not in ['about_me', 'title_life', 'title_10', 'title_20', 'title_30', 'title_40', 'title_50', 'title_60']:
                 return {'error':'Invalid user key'}, 400
 
             setattr(u, key, value)

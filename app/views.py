@@ -140,6 +140,13 @@ def get_auth_token():
                                     'username': g.user.username,
                                     'email': g.user.email,
                                     'birthday': g.user.birthday,
+                                    'title_life':g.user.title_life,
+                                    'title_10':g.user.title_10,
+                                    'title_20':g.user.title_20,
+                                    'title_30':g.user.title_30,
+                                    'title_40':g.user.title_40,
+                                    'title_50':g.user.title_50,
+                                    'title_60':g.user.title_60,
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -152,6 +159,13 @@ def get_resource():
                             'username': g.user.username,
                             'email': g.user.email,
                             'birthday': g.user.birthday,
+                            'title_life':g.user.title_life,
+                            'title_10':g.user.title_10,
+                            'title_20':g.user.title_20,
+                            'title_30':g.user.title_30,
+                            'title_40':g.user.title_40,
+                            'title_50':g.user.title_50,
+                            'title_60':g.user.title_60,
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
@@ -228,7 +242,8 @@ def authorized():
     return jsonify({'user':{'id':u.id,
                             'username':u.username,
                             'email':u.email,
-                            'birthday':u.birthday},
+                            'birthday':u.birthday,
+                            'title_life':u.title_life},
                             # 'confirmed_at':u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                     'access_token':auth.access_token})
 
