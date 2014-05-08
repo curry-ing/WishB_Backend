@@ -546,11 +546,12 @@ class UserBucketAPI(Resource):
         if len(b) == 0:
             return {'error':'No data Found'}, 204
 
-        social_user = UserSocial.query.filter_by(user_id=u.id).first()
-        graph = facebook.GraphAPI(social_user.access_token)
+        if u.fb_id is not None:
+            social_user = UserSocial.query.filter_by(user_id=u.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
 
         for i in b:
-            if i.fb_feed_id is not None:
+            if u.fb_id is not None and i.fb_feed_id is not None:
                 fb_likes = graph.get_object(i.fb_feed_id+'/likes')
                 fb_comments = graph.get_object(i.fb_feed_id+'/comments')
             data.append({
