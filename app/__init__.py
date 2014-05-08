@@ -104,6 +104,6 @@ def inject_user():
 
 # app.context_processor(backends)
 
-@security.context_processor
-def security_context_processor():
-    return dict(hello="world")
+# @security.context_processor
+# def security_context_processor():
+#     return dict(hello="world")
