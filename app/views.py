@@ -7,25 +7,23 @@ from flask.ext.uploads import UploadSet, IMAGES, configure_uploads
 from werkzeug import check_password_hash, generate_password_hash, utils
 from rauth.service import OAuth2Service
 
-auth = HTTPBasicAuth()
-
-from guess_language import guessLanguage
-
 from app import app, db, babel
 from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
+from guess_language import guessLanguage
 
 from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET
 
 from datetime import datetime
+
+import os
+import api
 import httplib, urllib
 
-import api
-
-
 now = datetime.utcnow()
+auth = HTTPBasicAuth()
 
 graph_url = 'https://graph.facebook.com/'
 facebook = OAuth2Service(name='facebook',
@@ -55,8 +53,6 @@ def login():
 @app.route('/logout_new')
 def logout():
     return render_template('index.html', title='Index', action='logout')
-    # logout_user()
-    # return redirect(url_for('index'))
 
 
 @app.route('/register')
@@ -300,13 +296,39 @@ def upload():
     return render_template('upload_file.html')
 
 
-@app.route('/photo/<id>')
-def show(id):
-    f = File.query.filter_by(id = id).first()
-    if f is None:
+@app.route('/image/<img_id>.<type>')
+def send_pic(img_id,type):
+    img = File.query.filter_by(id = img_id).first()
+
+    basedir = os.path.abspath('app/static/uploads/photos')
+    filename = img.name
+
+    if type == 'origin':
+        path = basedir
+    elif type == 'thumb_md':
+        if (os.path.isfile(os.path.join(basedir, type, filename))):
+            path = os.path.join(basedir, type)
+        else :
+            path = basedir
+    elif type == 'thumb_sm':
+        if (os.path.isfile(os.path.join(basedir, type, filename))):
+            path = os.path.join(basedir, type)
+        else :
+            path = basedir
+    else :
         abort(404)
-    url = photos.url(f.name)
-    return render_template('show.html', url=url, photo=f)
+
+
+    return send_from_directory(path, filename)
+
+
+# @app.route('/photo/<id>')
+# def show(id):
+#     f = File.query.filter_by(id = id).first()
+#     if f is None:
+#         abort(404)
+#     url = photos.url(f.name)
+#     return render_template('show.html', url=url, photo=f)
 
 
 ##### DO NOT USE ANYMORE ############################################
@@ -454,3 +476,4 @@ def unfollow(username):
 #             flash('You were logged in')
 #             return redirect(url_for('index'))
 #     return render_template('login_old.html', title='Login', form=form)
+

@@ -3,8 +3,9 @@ __author__ = 'masunghoon'
 # Libraries
 import random, datetime
 import facebook
+import os
 
-from flask import request, g
+from flask import request, g, url_for
 from flask.ext.httpauth import HTTPBasicAuth
 from flask.ext.restful import Resource, reqparse, fields, marshal
 from flask.ext.uploads import UploadSet, IMAGES, configure_uploads, patch_request_class
@@ -17,6 +18,8 @@ from app import db, api, app
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
 from config import FB_CLIENT_ID, FB_CLIENT_SECRET
+
+from PIL import Image
 
 photos = UploadSet('photos',IMAGES)
 configure_uploads(app, photos)
@@ -372,10 +375,11 @@ class BucketAPI(Resource):
             'rpt_type': b.rpt_type,
             'rpt_cndt': b.rpt_cndt,
             'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
+            'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
+            'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,kind='thumb_md',_external=True),
             'fb_feed_id': None if b.fb_feed_id is None else b.fb_feed_id,
             'fb_likes': None if b.fb_feed_id is None else fb_likes['data'],
-            'fb_comments': None if b.fbfeed_id is None else fb_comments['data']
+            'fb_comments': None if b.fb_feed_id is None else fb_comments['data']
         }
 
         return {'status':'success',
@@ -464,6 +468,26 @@ class BucketAPI(Resource):
             configure_uploads(app, upload_files)
 
             filename = upload_files.save(request.files[upload_type])
+            basedir = os.path.abspath('app/static/uploads/photos')
+
+            # MAKE THUMBNAIL IMAGES
+            # TODO: Make Function
+            img = Image.open(os.path.abspath('app/static/uploads/photos/'+filename))
+
+            org_width = img.size[0]
+            org_height = img.size[1]
+
+            longer_side = ('width', org_width) if org_width > org_height else ('height', org_height)
+
+            if longer_side[1] > 540:
+                img.thumbnail((540, 540), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_md',filename), quality=75, optimize=True, progressive=True)
+
+
+            if longer_side[1] > 256:
+                img.thumbnail((256,256), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_sm',filename), quality=50, optimize=True, progressive=True)
+
             splits = []
 
             for item in filename.split('.'):
@@ -500,10 +524,12 @@ class BucketAPI(Resource):
               'rpt_type': b.rpt_type,
               'rpt_cndt': b.rpt_cndt,
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-              'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)}
+              'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
+              'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,kind='thumb_md', _external=True)}
+              # 'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)}
         return {'status':'success',
                 'description':'Bucket put success.',
-                'data':data}, 201
+                'data':data}, 200
 
 
     def delete(self, id):
@@ -570,7 +596,8 @@ class UserBucketAPI(Resource):
                 'rpt_type': i.rpt_type,
                 'rpt_cndt': i.rpt_cndt,
                 'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                'cvr_img_url': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
+                'cvr_img_url_old': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
+                'cvr_img_url': None if i.cvr_img_id is None else url_for('send_pic',img_id=i.cvr_img_id,kind='thumb_md', _external=True),
                 'fb_feed_id': None if i.fb_feed_id is None else i.fb_feed_id,
                 'fb_likes': None if i.fb_feed_id is None else fb_likes['data'],
                 'fb_comments': None if i.fb_feed_id is None else fb_comments['data']
@@ -619,9 +646,10 @@ class UserBucketAPI(Resource):
             else:
                 level = int(b.level) + 1
 
-        if params['rpt_type'] not in ['WKRP','WEEK','MNTH']:
-            return {'status':'error',
-                    'description':'Invalid repeat-type value'}, 400
+        if 'rpt_type' in params:
+            if params['rpt_type'] not in ['WKRP','WEEK','MNTH']:
+                return {'status':'error',
+                        'description':'Invalid repeat-type value'}, 400
 
         if 'rpt_cndt' in params:
             dayOfWeek = datetime.date.today().weekday()
@@ -642,7 +670,27 @@ class UserBucketAPI(Resource):
             upload_files = UploadSet('photos',IMAGES)
             configure_uploads(app, upload_files)
 
+            basedir = os.path.abspath('app/static/uploads/photos')
             filename = upload_files.save(request.files[upload_type])
+
+            # MAKE THUMBNAIL IMAGES
+            # TODO: Make Function
+            img = Image.open(os.path.abspath('app/static/uploads/photos/'+filename))
+
+            org_width = img.size[0]
+            org_height = img.size[1]
+
+            longer_side = ('width', org_width) if org_width > org_height else ('height', org_height)
+
+            if longer_side[1] > 540:
+                img.thumbnail((540, 540), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_md',filename), quality=75, optimize=True, progressive=True)
+
+
+            if longer_side[1] > 256:
+                img.thumbnail((256,256), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_sm',filename), quality=50, optimize=True, progressive=True)
+
             splits = []
 
             for item in filename.split('.'):
@@ -658,7 +706,7 @@ class UserBucketAPI(Resource):
         bkt = Bucket(title=params['title'],
                      user_id=g.user.id,
                      level=str(level),
-                     status= params['status'] if 'status' in params else True,
+                     status= params['status'] if 'status' in params else '0',
                      private=params['private'] if 'private' in params else False,
                      reg_dt=datetime.datetime.now(),
                      lst_mod_dt=datetime.datetime.now(),
@@ -712,7 +760,8 @@ class UserBucketAPI(Resource):
             'rpt_type': bkt.rpt_type,
             'rpt_cndt': bkt.rpt_cndt,
             'lst_mod_dt': None if bkt.lst_mod_dt is None else bkt.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            'cvr_img_url': None if bkt.cvr_img_id is None else photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name),
+            'cvr_img_url_old': None if bkt.cvr_img_id is None else photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name),
+            'cvr_img_url': None if bkt.cvr_img_id is None else url_for('send_pic',img_id=bkt.cvr_img_id,kind='thumb_md', _external=True),
             'fb_feed_id':None if bkt.fb_feed_id is None else bkt.fb_feed_id
         }
 
@@ -981,7 +1030,26 @@ class BucketTimeline(Resource):
             upload_files = UploadSet('photos',IMAGES)
             configure_uploads(app, upload_files)
 
+            basedir = os.path.abspath('app/static/uploads/photos')
             filename = upload_files.save(request.files[upload_type])
+            # MAKE THUMBNAIL IMAGES
+            # TODO: Make Function
+            img = Image.open(os.path.abspath('app/static/uploads/photos/'+filename))
+
+            org_width = img.size[0]
+            org_height = img.size[1]
+
+            longer_side = ('width', org_width) if org_width > org_height else ('height', org_height)
+
+            if longer_side[1] > 540:
+                img.thumbnail((540, 540), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_md',filename), quality=75, optimize=True, progressive=True)
+
+
+            if longer_side[1] > 256:
+                img.thumbnail((256,256), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_sm',filename), quality=50, optimize=True, progressive=True)
+
             splits = []
 
             for item in filename.split('.'):
@@ -1124,7 +1192,28 @@ class TimelineContent(Resource):
             upload_files = UploadSet('photos',IMAGES)
             configure_uploads(app, upload_files)
 
+            basedir = os.path.abspath('app/static/uploads/photos')
             filename = upload_files.save(request.files[upload_type])
+
+            # MAKE THUMBNAIL IMAGES
+            # TODO: Make Function
+            img = Image.open(os.path.abspath('app/static/uploads/photos/'+filename))
+
+            org_width = img.size[0]
+            org_height = img.size[1]
+
+            longer_side = ('width', org_width) if org_width > org_height else ('height', org_height)
+
+            if longer_side[1] > 540:
+                img.thumbnail((540, 540), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_md',filename), quality=75, optimize=True, progressive=True)
+
+
+            if longer_side[1] > 256:
+                img.thumbnail((256,256), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_sm',filename), quality=50, optimize=True, progressive=True)
+
+
             splits = []
 
             for item in filename.split('.'):

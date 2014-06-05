@@ -34,6 +34,7 @@ itsdangerous
 rauth
 facebook-sdk
 pymongo
+Image
 #pycrypto
 #Flask-OpenID==1.1.1
 #psycopg2
