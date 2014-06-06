@@ -376,7 +376,7 @@ class BucketAPI(Resource):
             'rpt_cndt': b.rpt_cndt,
             'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
             'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
-            'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,kind='thumb_md',_external=True),
+            'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md',_external=True),
             'fb_feed_id': None if b.fb_feed_id is None else b.fb_feed_id,
             'fb_likes': None if b.fb_feed_id is None else fb_likes['data'],
             'fb_comments': None if b.fb_feed_id is None else fb_comments['data']
@@ -525,7 +525,7 @@ class BucketAPI(Resource):
               'rpt_cndt': b.rpt_cndt,
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
               'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
-              'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,kind='thumb_md', _external=True)}
+              'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)}
               # 'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)}
         return {'status':'success',
                 'description':'Bucket put success.',
@@ -597,7 +597,7 @@ class UserBucketAPI(Resource):
                 'rpt_cndt': i.rpt_cndt,
                 'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 'cvr_img_url_old': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
-                'cvr_img_url': None if i.cvr_img_id is None else url_for('send_pic',img_id=i.cvr_img_id,kind='thumb_md', _external=True),
+                'cvr_img_url': None if i.cvr_img_id is None else url_for('send_pic',img_id=i.cvr_img_id,img_type='thumb_md', _external=True),
                 'fb_feed_id': None if i.fb_feed_id is None else i.fb_feed_id,
                 'fb_likes': None if i.fb_feed_id is None else fb_likes['data'],
                 'fb_comments': None if i.fb_feed_id is None else fb_comments['data']
@@ -743,7 +743,6 @@ class UserBucketAPI(Resource):
             bkt.fb_feed_id = resp['id']
 
         db.session.commit()
-
         data={
             'id': bkt.id,
             'user_id': bkt.user_id,
@@ -761,7 +760,7 @@ class UserBucketAPI(Resource):
             'rpt_cndt': bkt.rpt_cndt,
             'lst_mod_dt': None if bkt.lst_mod_dt is None else bkt.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
             'cvr_img_url_old': None if bkt.cvr_img_id is None else photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name),
-            'cvr_img_url': None if bkt.cvr_img_id is None else url_for('send_pic',img_id=bkt.cvr_img_id,kind='thumb_md', _external=True),
+            'cvr_img_url': None if bkt.cvr_img_id is None else url_for('send_pic',img_id=bkt.cvr_img_id,img_type='thumb_md', _external=True),
             'fb_feed_id':None if bkt.fb_feed_id is None else bkt.fb_feed_id
         }
 

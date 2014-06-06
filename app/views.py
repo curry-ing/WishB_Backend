@@ -282,7 +282,7 @@ photos = UploadSet('photos',IMAGES)
 configure_uploads(app, photos)
 
 @app.route('/upload', methods=['GET','POST'])
-# @auth.login_required
+@auth.login_required
 def upload():
     if request.method == 'POST' and 'photo' in request.files:
         filename = photos.save(request.files['photo'])
@@ -296,23 +296,23 @@ def upload():
     return render_template('upload_file.html')
 
 
-@app.route('/image/<img_id>.<type>')
-def send_pic(img_id,type):
+@app.route('/image/<img_id>.<img_type>')
+def send_pic(img_id,img_type):
     img = File.query.filter_by(id = img_id).first()
 
     basedir = os.path.abspath('app/static/uploads/photos')
     filename = img.name
 
-    if type == 'origin':
+    if img_type == 'origin':
         path = basedir
-    elif type == 'thumb_md':
-        if (os.path.isfile(os.path.join(basedir, type, filename))):
-            path = os.path.join(basedir, type)
+    elif img_type == 'thumb_md':
+        if (os.path.isfile(os.path.join(basedir, img_type, filename))):
+            path = os.path.join(basedir, img_type)
         else :
             path = basedir
-    elif type == 'thumb_sm':
-        if (os.path.isfile(os.path.join(basedir, type, filename))):
-            path = os.path.join(basedir, type)
+    elif img_type == 'thumb_sm':
+        if (os.path.isfile(os.path.join(basedir, img_type, filename))):
+            path = os.path.join(basedir, img_type)
         else :
             path = basedir
     else :
