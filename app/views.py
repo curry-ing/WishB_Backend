@@ -169,12 +169,16 @@ def get_resource():
 def verify_password(username_or_token, password):
     # first try to authenticate by token
     if password == "facebook":
+        print username_or_token
+        print password
         auth = facebook.get_session(token=username_or_token)
         resp = auth.get('/me')
         if resp.status_code == 200:
             fb_user = resp.json()
+            print fb_user
             # user = User.query.filter_by(email=fb_user.get('email')).first()
             birthday = fb_user['birthday'][6:10] + fb_user['birthday'][0:2] + fb_user['birthday'][3:5]
+            print fb_user
             user = User.get_or_create(fb_user['email'], fb_user['name'], fb_user['id'], birthday)
 
             conn = httplib.HTTPSConnection("graph.facebook.com")

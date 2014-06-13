@@ -54,6 +54,7 @@ class User(db.Model, UserMixin):
     title_40 = db.Column(db.String(128))
     title_50 = db.Column(db.String(128))
     title_60 = db.Column(db.String(128))
+    profile_img_id = db.Column(db.Integer, db.ForeignKey('file.id'))
     followed = db.relationship('User',
         secondary = followers, 
         primaryjoin = (followers.c.follower_id == id), 

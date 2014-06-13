@@ -76,11 +76,11 @@ class VerificationAPI(Resource):
         try:
             if User.email_exists(emailAddr):
                 return {'status':'success',
-                        'code':'0',
+                        'data':'0',
                         'description':'Email already exists'}, 200
             else:
                 return {'status':'success',
-                        'code':'1',
+                        'data':'1',
                         'description':'Available Email Address'}, 200
         except:
             return {'status':'error',
@@ -183,8 +183,27 @@ class UserAPI(Resource):
     def get(self, id):
         u = User.query.filter_by(id=id).first()
 
+        data = {'id': u.id,
+                'email': u.email,
+                'username': u.username,
+                'about_me': u.about_me,
+                'last_seen': u.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
+                'birthday': u.birthday,
+                'uri': "/api/user/" + str(u.id),
+                'title_life': u.title_life,
+                'title_10': u.title_10,
+                'title_20': u.title_20,
+                'title_30': u.title_30,
+                'title_40': u.title_40,
+                'title_50': u.title_50,
+                'title_60': u.title_60,
+                'profile_img_url': None if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)
+        }
+
         return {'status':'success',
-                  'data':marshal(u, user_fields)}, 200
+                'description':'normal',
+                'data': data}, 200
+                  # 'data':marshal(u, user_fields)}, 200
 
 
     #modify My User Profile
@@ -192,29 +211,31 @@ class UserAPI(Resource):
         if request.json:
             params = request.json
         elif request.form:
-            params = request.form
+            params = {}
+            for key in request.form:
+                params[key] = request.form[key]
         else:
-            return {'status':'error','description':'Request Failed'}, 400
+            return {'status':'error','description':'Request Failed'}, 500
 
         u = User.query.filter_by(id=id).first()
         if u != g.user:
-            return {'error': 'Unauthorized'}, 401
+            return {'status':'error', 'description': 'Unauthorized'}, 401
 
         for key in params:
             value = None if params[key]=="" else params[key]    # Or Use (params[key],None)[params[key]==""] Sam Hang Yeonsanja
 
             # Nobody can change id, email, fb_id, last_seen
             if key in ['id', 'email', 'fb_id', 'last_seen']:
-                return {'error':'Cannot change ' + key}, 400
+                return {'status':'error', 'description':'Cannot change ' + key}, 400
 
             # Just ROLE_ADMIN user can change 'role', 'login_fault'
             if key in ['login_fault', 'role'] and g.user.role == ROLE_USER:
-                return {'error':'Only Admin can change ' + key}, 401
+                return {'status':'error', 'description':'Only Admin can change ' + key}, 401
 
             # Validate & hash Password
             if key == 'password':
                 if len(value) < 4:
-                    return {'error':'Password is too short'}, 400
+                    return {'status':'error', 'description':'Password is too short'}, 400
                 u.hash_password(value)
                 continue                                        # if not continue hash will be reset.
 
@@ -224,33 +245,102 @@ class UserAPI(Resource):
                     int(value[0:4]) < 1900 or int(value[0:4]) > int(datetime.datetime.now().strftime("%Y")) or \
                     int(value[4:6]) < 0 or int(value[4:6]) > 12 or \
                     int(value[6:8]) < 0 or int(value[6:8]) > 31:
-                        return {"error":"Invalid value for Birthday: " + value[0:4] + '/' + value[4:6] + '/' + value [6:8]}, 400
+                        return {'status':'error',
+                                'description':"Invalid value for Birthday: " + value[0:4] + '/' + value[4:6] + '/' + value [6:8]}, 400
 
             # Username cannot be null
             elif key == 'username':
                 if value == None:
-                    return {'error':'Username cannot be blank'}, 400
+                    return {'status':'error', 'description':'Username cannot be blank'}, 400
 
 
             elif key not in ['about_me', 'title_life', 'title_10', 'title_20', 'title_30', 'title_40', 'title_50', 'title_60']:
-                return {'error':'Invalid user key'}, 400
+                return {'status':'error', 'description':'Invalid user key'}, 400
 
             setattr(u, key, value)
-        db.session.commit()
 
-        return marshal(u, user_fields), 201
+        if 'photo' in request.files:
+            upload_type = 'photo'
+
+            if len(request.files[upload_type].filename) > 64:
+                return {'status':'error',
+                        'description':'Filename is too long (Max 64bytes include extensions)'}, 403
+            upload_files = UploadSet('photos',IMAGES)
+            configure_uploads(app, upload_files)
+
+            filename = upload_files.save(request.files[upload_type])
+            basedir = os.path.abspath('app/static/uploads/photos')
+
+            # MAKE THUMBNAIL IMAGES
+            # TODO: Make Function
+            img = Image.open(os.path.abspath('app/static/uploads/photos/'+filename))
+
+            org_width = img.size[0]
+            org_height = img.size[1]
+
+            longer_side = ('width', org_width) if org_width > org_height else ('height', org_height)
+
+            if longer_side[1] > 540:
+                img.thumbnail((540, 540), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_md',filename), quality=75, optimize=True, progressive=True)
+
+
+            if longer_side[1] > 128:
+                img.thumbnail((128, 128), Image.ANTIALIAS)
+                img.save(os.path.join(basedir,'thumb_sm',filename), quality=75, optimize=True, progressive=True)
+
+            splits = []
+
+            for item in filename.split('.'):
+                splits.append(item)
+            extension = filename.split('.')[len(splits) -1]
+
+            f = File(filename=filename, user_id=g.user.id, extension=extension, type=upload_type)
+            db.session.add(f)
+            db.session.flush()
+            db.session.refresh(f)
+
+            setattr(u, 'profile_img_id', f.id)
+
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return {'status':'error', 'description':'Something went wrong'}, 500
+
+        data = {'id': u.id,
+                'email': u.email,
+                'username': u.username,
+                'about_me': u.about_me,
+                'last_seen': u.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
+                'birthday': u.birthday,
+                'uri': "/api/user/" + str(u.id),
+                'title_life': u.title_life,
+                'title_10': u.title_10,
+                'title_20': u.title_20,
+                'title_30': u.title_30,
+                'title_40': u.title_40,
+                'title_50': u.title_50,
+                'title_60': u.title_60,
+                'profile_img_url': None if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)}
+
+        return {'status':'success',
+                'description':'normal',
+                'data': data}, 201
+                # 'data':marshal(u, user_fields)}, 201
 
     #delete a User
     def delete(self, id):
         u = User.query.filter_by(id=id).first()
         if u != g.user:
-            return {'error':'Unauthorized'}, 401
+            return {'status':'error', 'description':'Unauthorized'}, 401
         else:
             try:
-                db.session.delete(u)
-                db.session.commit()
+                # db.session.delete(u)
+                # db.session.commit()
+                return {'status':'success'}, 201
             except:
-                {'error':'Something went wrong'}, 500
+                return {'status':'error', 'description':'Something went wrong'}, 500
 
         return {'status':'success'}, 201
 
@@ -262,8 +352,27 @@ class UserListAPI(Resource):
     @auth.login_required
     def get(self):
         u = User.query.all()
+        data = []
+
+        for i in u:
+            data.append({'id': i.id,
+                        'email': i.email,
+                        'username': i.username,
+                        'about_me': i.about_me,
+                        'last_seen': i.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
+                        'birthday': i.birthday,
+                        'uri': "/api/user/" + str(i.id),
+                        # 'title_life': i.title_life,
+                        # 'title_10': i.title_10,
+                        # 'title_20': i.title_20,
+                        # 'title_30': i.title_30,
+                        # 'title_40': i.title_40,
+                        # 'title_50': i.title_50,
+                        # 'title_60': i.title_60,
+                        'profile_img_url': None if i.profile_img_id is None else url_for('send_pic',img_id=i.profile_img_id,img_type='thumb_sm', _external=True)})
         return {'status':'success',
-                'data':map(lambda t:marshal(t, user_fields), u)}, 200
+                'data': data}, 200
+                # 'data':map(lambda t:marshal(t, user_fields), u)}, 200
 
     def post(self):
         if request.json:
@@ -342,6 +451,7 @@ api.add_resource(UserListAPI, '/api/users', endpoint='users')
 
 ##### about BUCKET / BUCKETLIST ####################################
 
+### Single Bucket #######
 class BucketAPI(Resource):
     decorators = [auth.login_required]
 
@@ -351,7 +461,7 @@ class BucketAPI(Resource):
     def get(self, id):
         b = Bucket.query.filter(Bucket.id==id, Bucket.status!='9').first()
         if b == None:
-            return {'error':'No data found'}, 204
+            return {'status':'error', 'description':'No data found'}, 204
 
         if b.fb_feed_id is not None:
             social_user = UserSocial.query.filter_by(user_id=b.user_id).first()
@@ -504,10 +614,9 @@ class BucketAPI(Resource):
         b.lst_mod_dt = datetime.datetime.now()
         try:
             db.session.commit()
-
         except:
             db.session.rollback()
-            return {'error':'Something went wrong'}, 500
+            return {'status':'error', 'description':'Something went wrong'}, 500
 
         data={'id': b.id,
               'user_id': b.user_id,
@@ -526,18 +635,16 @@ class BucketAPI(Resource):
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
               'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
               'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)}
-              # 'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)}
         return {'status':'success',
                 'description':'Bucket put success.',
                 'data':data}, 200
-
 
     def delete(self, id):
         b = Bucket.query.filter_by(id=id).first()
 
         # Only bucket's owner can delete action.
         if b.user_id != g.user.id:
-            return {'error':'Unauthorized'}, 401
+            return {'status':'error', 'description':'Unauthorized'}, 401
 
         try:
             b.status = '9'
@@ -549,6 +656,7 @@ class BucketAPI(Resource):
                     'description':'delete failed'}, 403
 
 
+### User Bucket List ######
 class UserBucketAPI(Resource):
     decorators = [auth.login_required]
 
@@ -561,16 +669,21 @@ class UserBucketAPI(Resource):
             if g.user == u:
                 pass
             else:
-                return {'error':'User unauthorized'}, 401
+                return {'status':'error', 'description':'User unauthorized'}, 401
 
         data = []
         if g.user == u:
-            b = Bucket.query.filter(Bucket.user_id==u.id,Bucket.status!='9',Bucket.level=='0').all()
+            b = Bucket.query.filter(Bucket.user_id==u.id,
+                                    Bucket.status!='9',
+                                    Bucket.level=='0').all()
         else:
-            b = Bucket.query.filter(Bucket.user_id==u.id,Bucket.status!='9',Bucket.level=='0',Bucket.private=='0').all()
+            b = Bucket.query.filter(Bucket.user_id==u.id,
+                                    Bucket.status!='9',
+                                    Bucket.level=='0',
+                                    Bucket.private=='0').all()
 
         if len(b) == 0:
-            return {'error':'No data Found'}, 204
+            return {'status':'error', 'description':'No data Found'}, 204
 
         if u.fb_id is not None:
             social_user = UserSocial.query.filter_by(user_id=u.id).first()
@@ -607,7 +720,6 @@ class UserBucketAPI(Resource):
                 'description':'normal',
                 'data':data}, 200
 
-
     def post(self, id):
         u = User.query.filter_by(id=id).first()
         if u.id != g.user.id:
@@ -628,11 +740,11 @@ class UserBucketAPI(Resource):
             params[key] = None if params[key] == "" else params[key]
 
             if key in ['id', 'user_id', 'reg_dt', 'language']:
-                return {'error': key + ' cannot be entered manually.'}, 401
+                return {'status':'error', 'description': key + ' cannot be entered manually.'}, 401
 
         # Bucket Title required
         if not 'title' in params:
-            return {'error':'Bucket title required'}, 401
+            return {'status':'error', 'description':'Bucket title required'}, 401
 
         # Check ParentID is Valid & set level based on ParentID
         if not 'parent_id' in params or params['parent_id'] == None:
@@ -640,9 +752,9 @@ class UserBucketAPI(Resource):
         else:
             b = Bucket.query.filter_by(id=params['parent_id']).first()
             if b is None:
-                return {'error':'Invalid ParentID'}, 401
+                return {'status':'error', 'description':'Invalid ParentID'}, 401
             elif b.user_id != g.user.id:
-                return {'error':'Cannot make sub_bucket with other user\'s Bucket'}, 401
+                return {'status':'error', 'description':'Cannot make sub_bucket with other user\'s Bucket'}, 401
             else:
                 level = int(b.level) + 1
 
@@ -711,10 +823,11 @@ class UserBucketAPI(Resource):
                      reg_dt=datetime.datetime.now(),
                      lst_mod_dt=datetime.datetime.now(),
                      deadline=datetime.datetime.strptime(params['deadline'],'%Y-%m-%d').date() if 'deadline' in params \
-                                                                                      else datetime.datetime.now(),
+                                                                                                             else None,
+                                                                                      # else datetime.datetime.now(),
                      description=params['description'] if 'description' in params else None,
                      parent_id=params['parent_id'] if 'parent_id' in params else None,
-                     scope=params['scope'] if 'scope' in params else None,
+                     scope=params['scope'] if 'scope' in params else 'DECADE',
                      range=params['range'] if 'range' in params else None,
                      rpt_type=params['rpt_type'] if 'rpt_type' in params else None,
                      rpt_cndt=params['rpt_cndt'] if 'rpt_cndt' in params else None,
@@ -771,6 +884,8 @@ class UserBucketAPI(Resource):
 
 api.add_resource(BucketAPI, '/api/bucket/<int:id>', endpoint='bucket')
 api.add_resource(UserBucketAPI, '/api/buckets/user/<int:id>', endpoint='buckets')
+
+
 
 
 ##### TODAY ##################################################
@@ -844,7 +959,7 @@ class TodayExistsAPI(Resource):
         result = db.session.query(Plan.date).filter(Plan.user_id==user_id).distinct(Plan.date).all()
 
         if len(result) == 0:
-            return 204
+            return {'status':'success','description':'No data Found'}, 204
         else:
             data = []
             for i in range(len(result)):
@@ -867,11 +982,11 @@ class TodayAPI(Resource):
         elif request.form:
             params = request.form
         else:
-            return {'status':'Request Failed!'}
+            return {'status':'error', 'description':'Request Failed!'}
 
         p = Plan.query.filter_by(id=id).first()
         if p.user_id != g.user.id:
-            return {'status':'Unauthorized'}, 401
+            return {'status':'error', 'description':'Unauthorized'}, 401
 
         try:
             for item in params:
@@ -879,7 +994,7 @@ class TodayAPI(Resource):
                     setattr(p, item, params.get(item))
             db.session.commit()
         except:
-            return {'status':'failed'}, 401
+            return {'status':'error', 'description':'failed'}, 401
 
         return {'status':'succeed'}, 200
 
@@ -947,13 +1062,13 @@ class BucketTimeline(Resource):
             if g.user == u:
                 pass
             else:
-                return {'error':'User unauthorized'}, 401
+                return {'status':'error', 'description':'User unauthorized'}, 401
 
         # post = Post.query.filter_by(bucket_id=bucket_id).all()
         if 'date' in request.args:
             result = db.session.query(Post).filter(Post.bucket_id==bucket_id, Post.date==request.args['date']).all()
         else:
-            result = db.session.query(Post).filter(Post.bucket_id==bucket_id).all()
+            result = db.session.query(Post).filter(Post.bucket_id==bucket_id).order_by(Post.date.desc()).all()
 
         if result is None:
             return {'status':'success',
@@ -1004,7 +1119,7 @@ class BucketTimeline(Resource):
             params[key] = None if params[key] == "" else params[key]
 
             if key in ['id', 'user_id', 'bucket_id', 'language', 'body', 'timestamp', 'reg_dt', 'lst_mod_dt']:
-                return {'error': key + ' cannot be entered manually.'}, 401
+                return {'status':'error', 'description': key + ' cannot be entered manually.'}, 401
 
         contents = []
 
@@ -1128,7 +1243,7 @@ class TimelineContent(Resource):
             if g.user == u:
                 pass
             else:
-                return {'error':'User unauthorized'}, 401
+                return {'status':'error', 'description':'User unauthorized'}, 401
 
         data = {'id':post.id,
                 'user_id':post.user_id,
