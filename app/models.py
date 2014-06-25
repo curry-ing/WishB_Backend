@@ -184,6 +184,8 @@ class Post(db.Model):
     url3 = db.Column(db.String(256))
     reg_dt = db.Column(db.DateTime)
     lst_mod_dt = db.Column(db.DateTime)
+    content_dt = db.Column(db.DateTime)
+    fb_feed_id = db.Column(db.String(128))
 
     def __repr__(self):
         return '<Post %r>' % self.body

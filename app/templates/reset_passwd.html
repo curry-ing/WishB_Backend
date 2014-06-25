@@ -85,7 +85,8 @@
                 data:{password:newPasswd},
                 success:function(res){
                     alert(res.status + '\n' + res.description);  {# TODO: Change to Flash #}
-                    window.location = 'http://masunghoon.iptime.org:5001/'
+{#                    window.location = 'http://masunghoon.iptime.org:5001/'#}
+                    close();
                 },
                 error:function(res){
                     alert(res.responseJSON.status + '\n' + res.responseJSON.description);

@@ -253,8 +253,7 @@ class UserAPI(Resource):
                 if value == None:
                     return {'status':'error', 'description':'Username cannot be blank'}, 400
 
-
-            elif key not in ['about_me', 'title_life', 'title_10', 'title_20', 'title_30', 'title_40', 'title_50', 'title_60']:
+            elif key not in ['about_me', 'title_life', 'title_10', 'title_20', 'title_30', 'title_40', 'title_50', 'title_60', 'profile_img_id']:
                 return {'status':'error', 'description':'Invalid user key'}, 400
 
             setattr(u, key, value)
@@ -485,7 +484,7 @@ class BucketAPI(Resource):
             'rpt_type': b.rpt_type,
             'rpt_cndt': b.rpt_cndt,
             'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
+            # 'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
             'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md',_external=True),
             'fb_feed_id': None if b.fb_feed_id is None else b.fb_feed_id,
             'fb_likes': None if b.fb_feed_id is None else fb_likes['data'],
@@ -514,7 +513,7 @@ class BucketAPI(Resource):
             value = None if params[key]=="" else params[key]
 
             # Editable Fields
-            if key not in ['title','status','private','deadline','description','parent_id','scope','range','rpt_type','rpt_cndt']:
+            if key not in ['title','status','private','deadline','description','parent_id','scope','range','rpt_type','rpt_cndt','cvr_img_id','fb_share']:
                 return {'status':'error','description':'Invalid key: '+key}, 403
 
             # Nobody can modify id, user_id, reg_dt
@@ -554,17 +553,19 @@ class BucketAPI(Resource):
 
             if key == 'rpt_cndt':
                 dayOfWeek = datetime.date.today().weekday()
-                if b.rpt_type == 'WKRP' and b.rpt_cndt[dayOfWeek] != value[dayOfWeek]:
-                    if value[dayOfWeek] == '1':
-                        p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
-                                 user_id=b.user_id,
-                                 bucket_id=id,
-                                 status=0,
-                                 lst_mod_dt=datetime.datetime.now())
-                        db.session.add(p)
-                    else:
-                        p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
+                if params['rpt_type'] == 'WKRP':
+                    if b.rpt_cndt[dayOfWeek] != value[dayOfWeek]:
+                        if value[dayOfWeek] == '1':
+                            p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
+                                     user_id=b.user_id,
+                                     bucket_id=id,
+                                     status=0,
+                                     lst_mod_dt=datetime.datetime.now())
+                            db.session.add(p)
+                        else:
+                            p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
                         db.session.delete(p)
+
 
             setattr(b, key, value)
 
@@ -611,8 +612,28 @@ class BucketAPI(Resource):
 
             setattr(b, 'cvr_img_id', f.id)
 
-        b.lst_mod_dt = datetime.datetime.now()
+        if 'fb_share' in params:
+            social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
+
+            if params['fb_share'] in [True,'true']:
+                resp = graph.put_object("me","feed",
+                             message= g.user.username.encode('utf-8') + " Posted " + params['title'].encode('utf-8'),
+                             link="http://masunghoon.iptime.org:5001",
+                             # picture=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True) if 'photo' in request.files else None,
+                             caption="Dream Proj.",
+                             description=None if b.description is None else b.description.encode('utf-8'),
+                             name=b.title.encode('utf-8'),
+                             privacy={'value':'SELF'})
+
+                setattr(b, 'fb_feed_id', resp['id'])
+            elif params['fb_share'] in [False, 'false']:
+                if b.fb_feed_id is not None:
+                    resp = graph.delete_object(b.fb_feed_id)
+                    setattr(b, 'fb_feed_id', None)
+
         try:
+            b.lst_mod_dt = datetime.datetime.now()
             db.session.commit()
         except:
             db.session.rollback()
@@ -633,8 +654,9 @@ class BucketAPI(Resource):
               'rpt_type': b.rpt_type,
               'rpt_cndt': b.rpt_cndt,
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-              'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
+              # 'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
               'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)}
+
         return {'status':'success',
                 'description':'Bucket put success.',
                 'data':data}, 200
@@ -649,6 +671,11 @@ class BucketAPI(Resource):
         try:
             b.status = '9'
             b.lst_mod_dt = datetime.datetime.now()
+            if b.fb_feed_id is not None:
+                social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+                graph = facebook.GraphAPI(social_user.access_token)
+                resp = graph.delete_object(b.fb_feed_id)
+
             db.session.commit()
             return {'status':'success'}, 200
         except:
@@ -690,9 +717,9 @@ class UserBucketAPI(Resource):
             graph = facebook.GraphAPI(social_user.access_token)
 
         for i in b:
-            if u.fb_id is not None and i.fb_feed_id is not None:
-                fb_likes = graph.get_object(i.fb_feed_id+'/likes')
-                fb_comments = graph.get_object(i.fb_feed_id+'/comments')
+            # if u.fb_id is not None and i.fb_feed_id is not None:
+            #     fb_likes = graph.get_object(i.fb_feed_id+'/likes')
+            #     fb_comments = graph.get_object(i.fb_feed_id+'/comments')
             data.append({
                 'id': i.id,
                 'user_id': i.user_id,
@@ -703,17 +730,17 @@ class UserBucketAPI(Resource):
                 'private': i.private,
                 'parent_id': i.parent_id,
                 'reg_dt': i.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                'deadline': i.deadline.strftime("%Y-%m-%d"),
+                'deadline': None if i.deadline is None else i.deadline.strftime("%Y-%m-%d"),
                 'scope': i.scope,
                 'range': i.range,
                 'rpt_type': i.rpt_type,
                 'rpt_cndt': i.rpt_cndt,
                 'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                'cvr_img_url_old': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
+                # 'cvr_img_url_old': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
                 'cvr_img_url': None if i.cvr_img_id is None else url_for('send_pic',img_id=i.cvr_img_id,img_type='thumb_md', _external=True),
                 'fb_feed_id': None if i.fb_feed_id is None else i.fb_feed_id,
-                'fb_likes': None if i.fb_feed_id is None else fb_likes['data'],
-                'fb_comments': None if i.fb_feed_id is None else fb_comments['data']
+                # 'fb_likes': None if i.fb_feed_id is None else fb_likes['data'],
+                # 'fb_comments': None if i.fb_feed_id is None else fb_comments['data']
             })
 
         return {'status':'success',
@@ -742,9 +769,12 @@ class UserBucketAPI(Resource):
             if key in ['id', 'user_id', 'reg_dt', 'language']:
                 return {'status':'error', 'description': key + ' cannot be entered manually.'}, 401
 
-        # Bucket Title required
-        if not 'title' in params:
+        # Bucket Title & Deadline required
+        if not 'title' in params or params['title'] == None:
             return {'status':'error', 'description':'Bucket title required'}, 401
+
+        if not 'deadline' in params or params['deadline'] == None:
+            return {'status':'error', 'description':'Bucket deadline required'}, 401
 
         # Check ParentID is Valid & set level based on ParentID
         if not 'parent_id' in params or params['parent_id'] == None:
@@ -841,17 +871,17 @@ class UserBucketAPI(Resource):
             if params['rpt_type'] == 'WKRP' and params['rpt_cndt'][dayOfWeek] == '1':
                 p.bucket_id = bkt.id
 
-        if 'fb_share' in params:
+        if 'fb_share' in params and params['fb_share'] in [True,'true']:
             social_user = UserSocial.query.filter_by(user_id=u.id).first()
             graph = facebook.GraphAPI(social_user.access_token)
             resp = graph.put_object("me","feed",
-                         message= g.user.username + " Posted " + params['title'].encode('utf-8'),
+                         message= g.user.username.encode('utf-8') + " Posted " + params['title'].encode('utf-8'),
                          link="http://masunghoon.iptime.org:5001",
-                         picture=photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name) if 'photo' in request.files else None,
+                         # picture=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True) if 'photo' in request.files else None,
                          caption="Dream Proj.",
                          description=None if bkt.description is None else bkt.description.encode('utf-8'),
-                         name=bkt.title.encode('utf-8'),
-                         privacy={'value':params['fb_share'].encode('utf-8')})
+                         name=bkt.title.encode('utf-8'))
+                         # privacy={'value':params['fb_share'].encode('utf-8')})
 
             bkt.fb_feed_id = resp['id']
 
@@ -872,7 +902,7 @@ class UserBucketAPI(Resource):
             'rpt_type': bkt.rpt_type,
             'rpt_cndt': bkt.rpt_cndt,
             'lst_mod_dt': None if bkt.lst_mod_dt is None else bkt.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            'cvr_img_url_old': None if bkt.cvr_img_id is None else photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name),
+            # 'cvr_img_url_old': None if bkt.cvr_img_id is None else photos.url(File.query.filter_by(id=bkt.cvr_img_id).first().name),
             'cvr_img_url': None if bkt.cvr_img_id is None else url_for('send_pic',img_id=bkt.cvr_img_id,img_type='thumb_md', _external=True),
             'fb_feed_id':None if bkt.fb_feed_id is None else bkt.fb_feed_id
         }
@@ -928,7 +958,8 @@ class TodayListAPI(Resource):
                 'range': b.range,
                 'rpt_type': b.rpt_type,
                 'rpt_cndt': b.rpt_cndt,
-                'cvr_img_url': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)
+                'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)
+                # None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name)
             })
 
         if len(data) == 0:
@@ -1066,9 +1097,9 @@ class BucketTimeline(Resource):
 
         # post = Post.query.filter_by(bucket_id=bucket_id).all()
         if 'date' in request.args:
-            result = db.session.query(Post).filter(Post.bucket_id==bucket_id, Post.date==request.args['date']).all()
+            result = db.session.query(Post).filter(Post.bucket_id==bucket_id, Post.date==request.args['date']).order_by(Post.content_dt.desc()).all()
         else:
-            result = db.session.query(Post).filter(Post.bucket_id==bucket_id).order_by(Post.date.desc()).all()
+            result = db.session.query(Post).filter(Post.bucket_id==bucket_id).order_by(Post.content_dt.desc()).all()
 
         if result is None:
             return {'status':'success',
@@ -1079,14 +1110,16 @@ class BucketTimeline(Resource):
             timelineData.append({'id':i.id,
                     'user_id':i.user_id,
                     'date':i.date,
+                    'content_dt':i.content_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     'bucket_id':i.bucket_id,
                     'text':None if i.text is None else i.text,
-                    'img_url':None if i.img_id is None else photos.url(File.query.filter_by(id=i.img_id).first().name),
+                    'img_url':None if i.img_id is None else url_for('send_pic',img_id=i.img_id,img_type='thumb_md', _external=True),
                     'urls':[{'url1':None if i.url1 is None else i.url1},
                             {'url2':None if i.url2 is None else i.url2},
                             {'url3':None if i.url3 is None else i.url3},],
                     'reg_dt':i.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                    'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S")})
+                    'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    'fb_feed_id': None if i.fb_feed_id is None else i.fb_feed_id})
 
         data['count'] = len(result)
         data['timelineData'] = timelineData
@@ -1190,7 +1223,11 @@ class BucketTimeline(Resource):
             db.session.add(plan)
 
         post = Post(body=None,
-                    date=params['date'] if 'date' in params else datetime.datetime.now().strftime('%Y%m%d'),
+                    date=params['content_dt'].split()[0].split('-')[0] + \
+                         params['content_dt'].split()[0].split('-')[1] + \
+                         params['content_dt'].split()[0].split('-')[2]   \
+                         if 'content_dt' in params else datetime.datetime.now().strftime('%Y%m%d'),
+                    content_dt=datetime.datetime.strptime(params['content_dt'],'%Y-%m-%d %H:%M:%S') if 'content_dt' in params else datetime.datetime.now(),
                     user_id=b.user_id,
                     language=None,
                     bucket_id=bucket_id,
@@ -1207,18 +1244,35 @@ class BucketTimeline(Resource):
         db.session.flush()
         db.session.refresh(post)
 
+        if 'fb_share' in params and params['fb_share'] in ['true',True]:
+            social_user = UserSocial.query.filter_by(user_id=post.user_id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
+            resp = graph.put_object("me","feed",
+                         message= g.user.username.encode('utf-8') + " Posted " + params['text'].encode('utf-8'),
+                         link="http://masunghoon.iptime.org:5001",
+                         # picture=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True) if 'photo' in request.files else None,
+                         caption="Wish B. Timeline Test",
+                         description=None if post.text is None else post.text.encode('utf-8'),
+                         name="TEST")
+                         # privacy={'value':params['fb_share'].encode('utf-8')})
+
+            post.fb_feed_id = resp['id']
+
         db.session.commit()
 
         data = {'id':post.id,
-                    'user_id':post.user_id,
-                    'bucket_id':post.bucket_id,
-                    'text':None if post.text is None else post.text,
-                    'img_url':None if post.img_id is None else photos.url(File.query.filter_by(id=post.img_id).first().name),
-                    'urls':[{'url1':None if post.url1 is None else post.url1},
-                            {'url2':None if post.url2 is None else post.url2},
-                            {'url3':None if post.url3 is None else post.url3},],
-                    'reg_dt':post.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                    'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S")}
+                'user_id':post.user_id,
+                'bucket_id':post.bucket_id,
+                'date':post.date,
+                'text':None if post.text is None else post.text,
+                'content_dt':post.content_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                'img_url':None if post.img_id is None else url_for('send_pic',img_id=post.img_id,img_type='thumb_md', _external=True),
+                'urls':[{'url1':None if post.url1 is None else post.url1},
+                        {'url2':None if post.url2 is None else post.url2},
+                        {'url3':None if post.url3 is None else post.url3},],
+                'reg_dt':post.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
         return {'status':'success',
                 'description':'Successfully posted.',
@@ -1248,14 +1302,16 @@ class TimelineContent(Resource):
         data = {'id':post.id,
                 'user_id':post.user_id,
                 'date':post.date,
+                'content_dt':post.content_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 'bucket_id':post.bucket_id,
                 'text':None if post.text is None else post.text,
-                'img_url':None if post.img_id is None else photos.url(File.query.filter_by(id=post.img_id).first().name),
+                'img_url':None if post.img_id is None else url_for('send_pic',img_id=post.img_id,img_type='thumb_md', _external=True),
                 'urls':[{'url1':None if post.url1 is None else post.url1},
                         {'url2':None if post.url2 is None else post.url2},
                         {'url3':None if post.url3 is None else post.url3},],
                 'reg_dt':post.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S")}
+                'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
         return {'status':'success',
                 'description':'success',
@@ -1281,7 +1337,7 @@ class TimelineContent(Resource):
             value = None if params[key] == "" else params[key]
 
             # Editable Fields
-            if key not in ['text','url1','url2','url3']:
+            if key not in ['text','url1','url2','url3','img_id','fb_share','content_dt']:
                 return {'status':'error',
                         'description':key + ' field is not editable'}, 403
 
@@ -1294,6 +1350,11 @@ class TimelineContent(Resource):
             if key in ['url1','url2','url3'] and len(value) > 512:
                 return {'status':'error',
                         'description': key + ' is too long. (max 256 bytes)'}
+
+            if key in ['content_dt']:
+                value = datetime.datetime.strptime(params['content_dt'],'%Y-%m-%d %H:%M:%S')
+                content_dt_val = params['content_dt'].split()[0].split('-')
+                setattr(post, 'date', content_dt_val[0] + content_dt_val[1] + content_dt_val[2])
 
             setattr(post, key, value)
 
@@ -1341,9 +1402,28 @@ class TimelineContent(Resource):
 
             setattr(post, 'img_id', f.id)
 
-        post.lst_mod_dt = datetime.datetime.now()
+        if 'fb_share' in params:
+            social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
+
+            if params['fb_share'] in [True,'true']:
+                resp = graph.put_object("me","feed",
+                             message= g.user.username.encode('utf-8') + " Posted " + post.text.encode('utf-8'),
+                             link="http://masunghoon.iptime.org:5001",
+                             # picture=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True) if 'photo' in request.files else None,
+                             caption="Wish B.",
+                             description=None if post.text is None else post.text.encode('utf-8'),
+                             name=post.text.encode('utf-8'),
+                             privacy={'value':'SELF'})
+
+                setattr(post, 'fb_feed_id', resp['id'])
+            elif params['fb_share'] in [False, 'false']:
+                if post.fb_feed_id is not None:
+                    resp = graph.delete_object(post.fb_feed_id)
+                    setattr(post, 'fb_feed_id', None)
 
         try:
+            post.lst_mod_dt = datetime.datetime.now()
             db.session.commit()
         except:
             db.session.rollback()
@@ -1353,14 +1433,16 @@ class TimelineContent(Resource):
         data = {'id':post.id,
                 'user_id':post.user_id,
                 'date':post.date,
+                'content_dt':post.content_dt.strftime('%Y-%m-%d %H:%M:%S'),
                 'bucket_id':post.bucket_id,
                 'text':None if post.text is None else post.text,
-                'img_url':None if post.img_id is None else photos.url(File.query.filter_by(id=post.img_id).first().name),
+                'img_url':None if post.img_id is None else url_for('send_pic',img_id=post.img_id,img_type='thumb_md', _external=True),
                 'urls':[{'url1':None if post.url1 is None else post.url1},
                         {'url2':None if post.url2 is None else post.url2},
                         {'url3':None if post.url3 is None else post.url3},],
                 'reg_dt':post.reg_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S")}
+                'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
         return {'status':'success',
                 'description':'Post PUT success',
@@ -1376,6 +1458,11 @@ class TimelineContent(Resource):
 
         try:
             db.session.delete(post)
+            if post.fb_feed_id is not None:
+                social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+                graph = facebook.GraphAPI(social_user.access_token)
+                resp = graph.delete_object(post.fb_feed_id)
+
             db.session.commit()
         except:
             db.session.rollback()

@@ -21,12 +21,13 @@ from datetime import datetime
 import os
 import api
 import httplib, urllib
+import facebook
 
 now = datetime.utcnow()
 auth = HTTPBasicAuth()
 
 graph_url = 'https://graph.facebook.com/'
-facebook = OAuth2Service(name='facebook',
+fb = OAuth2Service(name='facebook',
                          authorize_url='https://www.facebook.com/dialog/oauth',
                          access_token_url=graph_url+'oauth/access_token',
                          client_id=FB_CLIENT_ID,
@@ -130,6 +131,13 @@ def internal_error(error):
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
+    profile_img = None
+    if g.user.fb_id is not None:
+        social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+        graph = facebook.GraphAPI(social_user.access_token)
+        if g.user.profile_img_id is None:
+            args = {'type':'normal'}
+            profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
     token = g.user.generate_auth_token()
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
@@ -143,6 +151,7 @@ def get_auth_token():
                                     'title_40':g.user.title_40,
                                     'title_50':g.user.title_50,
                                     'title_60':g.user.title_60,
+                                    'profile_img_url': profile_img if g.user.profile_img_id is None else url_for('send_pic',img_id=g.user.profile_img_id,img_type='thumb_sm', _external=True),
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -150,6 +159,13 @@ def get_auth_token():
 @app.route('/api/resource')
 @auth.login_required
 def get_resource():
+    profile_img = None
+    if g.user.fb_id is not None:
+        social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+        graph = facebook.GraphAPI(social_user.access_token)
+        if g.user.profile_img_id is None:
+            args = {'type':'normal'}
+            profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
                             'username': g.user.username,
@@ -162,6 +178,7 @@ def get_resource():
                             'title_40':g.user.title_40,
                             'title_50':g.user.title_50,
                             'title_60':g.user.title_60,
+                            'profile_img_url': profile_img if g.user.profile_img_id is None else url_for('send_pic',img_id=g.user.profile_img_id,img_type='thumb_sm', _external=True),
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
@@ -169,18 +186,13 @@ def get_resource():
 def verify_password(username_or_token, password):
     # first try to authenticate by token
     if password == "facebook":
-        print username_or_token
-        print password
-        auth = facebook.get_session(token=username_or_token)
+        auth = fb.get_session(token=username_or_token)
         resp = auth.get('/me')
         if resp.status_code == 200:
             fb_user = resp.json()
-            print fb_user
             # user = User.query.filter_by(email=fb_user.get('email')).first()
             birthday = fb_user['birthday'][6:10] + fb_user['birthday'][0:2] + fb_user['birthday'][3:5]
-            print fb_user
             user = User.get_or_create(fb_user['email'], fb_user['name'], fb_user['id'], birthday)
-
             conn = httplib.HTTPSConnection("graph.facebook.com")
             params = urllib.urlencode({'redirect_uri':'http://masunghoon.iptime.org:5001/',
                                        'client_id':FB_CLIENT_ID,
@@ -218,7 +230,7 @@ def verify_password(username_or_token, password):
 def login_fb():
     redirect_uri = url_for('authorized', _external=True)
     params = {'redirect_uri': redirect_uri, 'scope': 'email, user_birthday'}
-    return redirect(facebook.get_authorize_url(**params))
+    return redirect(fb.get_authorize_url(**params))
 
 
 @app.route('/facebook/authorized')
@@ -232,7 +244,7 @@ def authorized():
     redirect_uri = url_for('authorized', _external=True)
     data = dict(code=request.args['code'], redirect_uri=redirect_uri)
 
-    auth = facebook.get_auth_session(data=data)
+    auth = fb.get_auth_session(data=data)
 
     # the "me" response
     me = auth.get('me').json()
