@@ -224,7 +224,7 @@ class Plan(db.Model):
     lst_mod_dt = db.Column(db.DateTime)
 
     def __repr__(self):
-        return '<Plan %r>' % self.doneYN
+        return '<Plan %r>' % self.id
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)

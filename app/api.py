@@ -17,7 +17,7 @@ from sqlalchemy.sql import func
 from app import db, api, app
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
-from config import FB_CLIENT_ID, FB_CLIENT_SECRET
+from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE
 
 from PIL import Image
 
@@ -182,6 +182,13 @@ class UserAPI(Resource):
     #get specific User's Profile
     def get(self, id):
         u = User.query.filter_by(id=id).first()
+        profile_img = None
+        if u.fb_id is not None:
+            social_user = UserSocial.query.filter_by(user_id=u.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
+            if g.user.profile_img_id is None:
+                args = {'type':'normal'}
+                profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
 
         data = {'id': u.id,
                 'email': u.email,
@@ -197,7 +204,7 @@ class UserAPI(Resource):
                 'title_40': u.title_40,
                 'title_50': u.title_50,
                 'title_60': u.title_60,
-                'profile_img_url': None if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)
+                'profile_img_url': profile_img if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)
         }
 
         return {'status':'success',
@@ -307,6 +314,14 @@ class UserAPI(Resource):
             db.session.rollback()
             return {'status':'error', 'description':'Something went wrong'}, 500
 
+        profile_img = None
+        if u.fb_id is not None:
+            social_user = UserSocial.query.filter_by(user_id=u.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
+            if g.user.profile_img_id is None:
+                args = {'type':'normal'}
+                profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+
         data = {'id': u.id,
                 'email': u.email,
                 'username': u.username,
@@ -321,7 +336,7 @@ class UserAPI(Resource):
                 'title_40': u.title_40,
                 'title_50': u.title_50,
                 'title_60': u.title_60,
-                'profile_img_url': None if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)}
+                'profile_img_url': profile_img if u.profile_img_id is None else url_for('send_pic',img_id=u.profile_img_id,img_type='thumb_sm', _external=True)}
 
         return {'status':'success',
                 'description':'normal',
@@ -553,18 +568,37 @@ class BucketAPI(Resource):
 
             if key == 'rpt_cndt':
                 dayOfWeek = datetime.date.today().weekday()
+
                 if params['rpt_type'] == 'WKRP':
-                    if b.rpt_cndt[dayOfWeek] != value[dayOfWeek]:
-                        if value[dayOfWeek] == '1':
-                            p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
-                                     user_id=b.user_id,
-                                     bucket_id=id,
-                                     status=0,
-                                     lst_mod_dt=datetime.datetime.now())
-                            db.session.add(p)
-                        else:
+                    if b.rpt_type == 'WKRP':
+                        if b.rpt_cndt[dayOfWeek] != value[dayOfWeek]:
+                            if value[dayOfWeek] == '1':
+                                p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
+                                         user_id=b.user_id,
+                                         bucket_id=id,
+                                         status=0,
+                                         lst_mod_dt=datetime.datetime.now())
+                                db.session.add(p)
+                            else:
+                                try:
+                                    p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
+                                    db.session.delete(p)
+                                except:
+                                    pass
+                    else:
+                        p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
+                                 user_id=b.user_id,
+                                 bucket_id=id,
+                                 status=0,
+                                 lst_mod_dt=datetime.datetime.now())
+                        db.session.add(p)
+                else:
+                    if b.rpt_type == 'WKRP' and b.rpt_cndt[dayOfWeek] == '1':
+                        try:
                             p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
-                        db.session.delete(p)
+                            db.session.delete(p)
+                        except:
+                            pass
 
 
             setattr(b, key, value)
@@ -929,6 +963,7 @@ class TodayListAPI(Resource):
     def get(self,user_id):
 
         data = []
+        page_result = None
         u = User.query.filter_by(id = user_id).first()
         if u is None:
             return {'status':'error',
@@ -938,13 +973,22 @@ class TodayListAPI(Resource):
             return {'status':'error',
                     'description':'Unauthorized'}, 401
 
-        # if 'fdate' in request.args or 'tdate' in request.args:
-        result = db.session.query(Plan, Bucket).filter(Plan.bucket_id==Bucket.id,
+        if 'page' in request.args:
+            page = int(request.args['page'])
+            total_cnt = db.session.query(Plan, Bucket).filter(Plan.bucket_id==Bucket.id, Plan.user_id==user_id).count()
+            result = db.session.query(Plan, Bucket) \
+                               .filter(Plan.bucket_id==Bucket.id, Plan.user_id==user_id) \
+                               .order_by(Plan.date.desc(), Plan.id.asc())[POSTS_PER_PAGE*(page-1):POSTS_PER_PAGE*page]
+        elif 'fdate' in request.args or 'tdate' in request.args:
+            result = db.session.query(Plan, Bucket).filter(Plan.bucket_id==Bucket.id,
                                                            Plan.user_id==user_id,
                                                            Plan.date>=request.args['fdate'] if 'fdate' in request.args else '19000101',
                                                            Plan.date<=request.args['tdate'] if 'tdate' in request.args else datetime.datetime.now().strftime('%Y%m%d')).all()
+        else:
+            return {'status':'error',
+                    'description':'PAGE or FDATE, TDATE must be set'}, 400
 
-        for p, b in result:
+        for p, b in (result if page_result is None else page_result):
             data.append({
                 'id': p.id,
                 'date': p.date,
@@ -968,7 +1012,11 @@ class TodayListAPI(Resource):
 
         return {'status':'success',
                 'description':'Get Today list succeed. (Count: '+str(len(data))+')',
-                'data':data}, 200
+                'data':{
+                    'total_cnt':len(result) if request.args['page'] is None else total_cnt,
+                    'page_cnt':None if request.args['page'] is None else POSTS_PER_PAGE,
+                    'page':None if request.args['page'] is None else request.args['page'],
+                    'page_data':data}}, 200
 
 
 class TodayExistsAPI(Resource):
@@ -1098,6 +1146,10 @@ class BucketTimeline(Resource):
         # post = Post.query.filter_by(bucket_id=bucket_id).all()
         if 'date' in request.args:
             result = db.session.query(Post).filter(Post.bucket_id==bucket_id, Post.date==request.args['date']).order_by(Post.content_dt.desc()).all()
+        elif 'page' in request.args:
+            page = int(request.args['page'])
+            total_cnt = db.session.query(Post).filter(Post.bucket_id==bucket_id).count()
+            result = db.session.query(Post).filter(Post.bucket_id==bucket_id).order_by(Post.content_dt.desc())[POSTS_PER_PAGE*(page-1):POSTS_PER_PAGE*page]
         else:
             result = db.session.query(Post).filter(Post.bucket_id==bucket_id).order_by(Post.content_dt.desc()).all()
 
