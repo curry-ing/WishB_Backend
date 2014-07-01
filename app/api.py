@@ -17,13 +17,13 @@ from sqlalchemy.sql import func
 from app import db, api, app
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
-from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE
+from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE
 
 from PIL import Image
 
 photos = UploadSet('photos',IMAGES)
 configure_uploads(app, photos)
-patch_request_class(app, size=2097152) #File Upload Size = Up to 2MB
+patch_request_class(app, size=MAX_UPLOAD_SIZE) #File Upload Size = Up to 2MB
 
 ##### AUTHENTICATION #######################################
 
@@ -355,8 +355,6 @@ class UserAPI(Resource):
                 return {'status':'success'}, 201
             except:
                 return {'status':'error', 'description':'Something went wrong'}, 500
-
-        return {'status':'success'}, 201
 
 
 class UserListAPI(Resource):
