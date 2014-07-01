@@ -231,7 +231,7 @@ class File(db.Model):
     type = db.Column(db.String(16)) # IMAGE, VIDEO, AUDIO, FILE
     name = db.Column(db.String(256))
     extension = db.Column(db.String(4))
-    # user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer)
     uploaded_dt = db.Column(db.DateTime, default=datetime.now())
 
     def __repr__(self):
@@ -239,7 +239,7 @@ class File(db.Model):
 
     def __init__(self, filename, extension, user_id, type):
         self.name = filename
-        # self.user_id = user_id
+        self.user_id = user_id
         self.extension = extension
         self.type = type
 
