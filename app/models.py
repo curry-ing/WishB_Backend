@@ -202,8 +202,8 @@ class Bucket(db.Model):
     deadline = db.Column(db.DateTime)
     language = db.Column(db.String(5))
     parent_id = db.Column(db.Integer, default=0)
-    scope = db.Column(db.Integer(8))
-    range = db.Column(db.Integer(11))
+    scope = db.Column(db.String(8))
+    range = db.Column(db.String(11))
     rpt_type = db.Column(db.String(4))                  # Repeat Type
     rpt_cndt = db.Column(db.String(8))                  # Repeat Condition
     reg_dt = db.Column(db.DateTime)                     # Registered Datetime
