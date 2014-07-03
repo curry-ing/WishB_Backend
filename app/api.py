@@ -686,7 +686,6 @@ class BucketAPI(Resource):
               'rpt_type': b.rpt_type,
               'rpt_cndt': b.rpt_cndt,
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-              # 'cvr_img_url_old': None if b.cvr_img_id is None else photos.url(File.query.filter_by(id=b.cvr_img_id).first().name),
               'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)}
 
         return {'status':'success',
@@ -703,6 +702,11 @@ class BucketAPI(Resource):
         try:
             b.status = '9'
             b.lst_mod_dt = datetime.datetime.now()
+
+            p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
+            if p is not None:
+                db.session.delete(p);
+
             if b.fb_feed_id is not None:
                 social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
                 graph = facebook.GraphAPI(social_user.access_token)
