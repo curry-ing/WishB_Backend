@@ -3,8 +3,10 @@
 import MySQLdb
 import sys
 
+from local_config import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
+
 # open a database connection
-connection = MySQLdb.connect (host="localhost", user="dream", passwd="bravo", db="test")
+connection = MySQLdb.connect (host=MYSQL_HOST, user=MYSQL_USER, passwd=MYSQL_PASSWORD, db=MYSQL_DB)
 
 # prepare a cursor object using cursor() method
 cursor = connection.cursor()

@@ -4,7 +4,6 @@ from flask.ext.babel import gettext
 from flask.ext.sqlalchemy import get_debug_queries
 from flask.ext.httpauth import HTTPBasicAuth
 from flask.ext.uploads import UploadSet, IMAGES, configure_uploads
-from werkzeug import check_password_hash, generate_password_hash, utils
 from rauth.service import OAuth2Service
 
 from app import app, db, babel
@@ -22,6 +21,7 @@ import os
 import api
 import httplib, urllib
 import facebook
+import statsd
 
 now = datetime.utcnow()
 auth = HTTPBasicAuth()
@@ -34,6 +34,10 @@ fb = OAuth2Service(name='facebook',
                          client_secret=FB_CLIENT_SECRET,
                          base_url=graph_url);
 
+
+
+c = statsd.StatsClient('localhost',8125)
+
 @babel.localeselector
 def get_locale():
     return request.accept_languages.best_match(LANGUAGES.keys())
@@ -43,6 +47,7 @@ def get_locale():
 @app.route('/')
 @app.route('/index')
 def index():
+    c.incr('index')
     return render_template('index.html', title='index')
 
 
