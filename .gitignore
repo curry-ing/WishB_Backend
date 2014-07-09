@@ -54,6 +54,7 @@ docs/_build/
 
 
 ### Server Configuration Files (by MA) ###
+local_config.py
 config.py
 flask/
 makeplan.sql

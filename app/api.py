@@ -571,12 +571,16 @@ class BucketAPI(Resource):
                     if b.rpt_type == 'WKRP':
                         if b.rpt_cndt[dayOfWeek] != value[dayOfWeek]:
                             if value[dayOfWeek] == '1':
-                                p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
-                                         user_id=b.user_id,
-                                         bucket_id=id,
-                                         status=0,
-                                         lst_mod_dt=datetime.datetime.now())
-                                db.session.add(p)
+                                p = Plan.query.filter_by(bucket_id=id, date=datetime.date.today().strftime("%Y%m%d")).first()
+                                if p is None:
+                                    p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
+                                             user_id=b.user_id,
+                                             bucket_id=id,
+                                             status=0,
+                                             lst_mod_dt=datetime.datetime.now())
+                                    db.session.add(p)
+                                else:
+                                    p.lst_mod_dt = datetime.datetime.now()
                             else:
                                 try:
                                     p = Plan.query.filter_by(date=datetime.date.today().strftime("%Y%m%d"),bucket_id=id).first()
@@ -584,12 +588,16 @@ class BucketAPI(Resource):
                                 except:
                                     pass
                     else:
-                        p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
-                                 user_id=b.user_id,
-                                 bucket_id=id,
-                                 status=0,
-                                 lst_mod_dt=datetime.datetime.now())
-                        db.session.add(p)
+                        p = Plan.query.filter_by(bucket_id=id, date=datetime.date.today().strftime("%Y%m%d")).first()
+                        if p is None:
+                            p = Plan(date=datetime.date.today().strftime("%Y%m%d"),
+                                     user_id=b.user_id,
+                                     bucket_id=id,
+                                     status=0,
+                                     lst_mod_dt=datetime.datetime.now())
+                            db.session.add(p)
+                        else:
+                            p.lst_mod_dt = datetime.datetime.now()
                 else:
                     if b.rpt_type == 'WKRP' and b.rpt_cndt[dayOfWeek] == '1':
                         try:

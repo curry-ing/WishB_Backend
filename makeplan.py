@@ -36,7 +36,8 @@ and status = '0' \
 and level = '0' \
 and rpt_type = 'MNTH' \
 and ((weekday(NOW()) = 0 and dayofmonth(NOW()) <= 7) \
-or LAST_DAY(NOW()) - ((7 + WEEKDAY(LAST_DAY(NOW())) - 6) % 7) = date_format(NOW(), '%Y%m%d'));")
+or LAST_DAY(NOW()) - ((7 + WEEKDAY(LAST_DAY(NOW())) - 6) % 7) = date_format(NOW(), '%Y%m%d')) \
+on duplicate key update lst_mod_dt = NOW();")
 
 connection.commit()
 # fetch a single row using fetchone() method
