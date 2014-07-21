@@ -82,12 +82,12 @@ class VerificationAPI(Resource):
             g.user = None
         try:
             if User.email_exists(emailAddr):
-                logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+                logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
                 return {'status':'success',
                         'data':'0',
                         'description':'Email already exists'}, 200
             else:
-                logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+                logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
                 return {'status':'success',
                         'data':'1',
                         'description':'Available Email Address'}, 200
@@ -117,8 +117,9 @@ class ResetPassword(Resource):
     def post(self,string):
         if request.authorization is not None:
             g.user = User.verify_auth_token(request.authorization['username'])
+	    uid = g.user.id
         else:
-            g.user = None
+            uid = None
         u = User.query.filter_by(email = string).first()
         if not u:
             return {'status':'error',
@@ -128,7 +129,7 @@ class ResetPassword(Resource):
         db.session.commit()
         send_reset_password_mail(u)
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(uid, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Reset Password Mail Sent'}, 200
 
@@ -160,7 +161,7 @@ class ResetPassword(Resource):
             return {'status':'error',
                     'description':'Something went wrong'}, 500
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(None, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Password successfully reset'}, 200
 
@@ -207,7 +208,7 @@ class UserAPI(Resource):
         }
 
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
 
         return {'status':'success',
                 'description':'normal',
@@ -343,7 +344,7 @@ class UserAPI(Resource):
                 'title_60': u.title_60,
                 'profile_img_url': profile_img}
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'normal',
                 'data': data}, 201
@@ -357,7 +358,7 @@ class UserAPI(Resource):
             try:
                 # db.session.delete(u)
                 # db.session.commit()
-                logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+                logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
                 return {'status':'success'}, 201
             except:
                 return {'status':'error', 'description':'Something went wrong'}, 500
@@ -382,7 +383,7 @@ class UserListAPI(Resource):
                         'uri': "/api/user/" + str(i.id),
                         'profile_img_url': None if i.profile_img_id is None else url_for('send_pic',img_id=i.profile_img_id,img_type='thumb_sm', _external=True)})
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'data': data}, 200
 
@@ -449,10 +450,10 @@ class UserListAPI(Resource):
         g.user = u
         token = g.user.generate_auth_token()
 
-        logging_auth(g.user, "register", "email")
+        logging_auth(g.user.id, "register", "email")
         stsd.gauge('User_Registration', 1, delta=True)
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'data':{'user':{'id': g.user.id,
                                 'username': g.user.username,
@@ -478,9 +479,13 @@ class BucketAPI(Resource):
 
     def get(self, id):
         if request.authorization is not None:
-            g.user = User.verify_auth_token(request.authorization['username'])
+	    try:
+                g.user = User.verify_auth_token(request.authorization['username'])
+   		uid = g.user.id
+ 	    except:
+	        uid = None
         else:
-            g.user = None
+	    uid = None
         b = Bucket.query.filter(Bucket.id==id, Bucket.status!='9').first()
         if b == None:
             return {'status':'error', 'description':'No data found'}, 204
@@ -514,7 +519,7 @@ class BucketAPI(Resource):
             'fb_comments': None if b.fb_feed_id is None else fb_comments['data']
         }
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(uid, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'GET Success',
                 'data':data}, 200
@@ -677,15 +682,15 @@ class BucketAPI(Resource):
                     if 'photo' in request.files or b.cvr_img_id is not None:
                         feed['picture']= None if b.cvr_img_id is None else url_for('send_pic', img_id=b.cvr_img_id, img_type='origin', _external=True)
 
-                    facebook_feed(feed, g.user.id, 'bucket', b.id)
-                    logging_social(g.user, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
+            	    facebook_feed(feed, g.user.id, 'bucket', b.id)
+                    logging_social(g.user.id, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
                 elif params['fb_share'] in [False, 'false']:
                     if b.fb_feed_id is not None:
                         social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
                         graph = facebook.GraphAPI(social_user.access_token)
                         graph.delete_object(b.fb_feed_id)
 
-                        logging_social(g.user, 'Facebook', 'delete', 'bucket', inspect.stack()[0][3])
+                        logging_social(g.user.id, 'Facebook', 'delete', 'bucket', inspect.stack()[0][3])
                         setattr(b, 'fb_feed_id', None)
             except:
                 pass
@@ -714,7 +719,7 @@ class BucketAPI(Resource):
               'lst_mod_dt': None if b.lst_mod_dt is None else b.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
               'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic',img_id=b.cvr_img_id,img_type='thumb_md', _external=True)}
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Bucket put success.',
                 'data':data}, 200
@@ -741,7 +746,7 @@ class BucketAPI(Resource):
                 resp = graph.delete_object(b.fb_feed_id)
 
             db.session.commit()
-            logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+            logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
             return {'status':'success'}, 200
         except:
             return {'status':'error',
@@ -810,7 +815,7 @@ class UserBucketAPI(Resource):
 
         stsd.gauge('BucketList_API_Call', 1, delta=True)
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'normal',
                 'data':data}, 200
@@ -956,8 +961,9 @@ class UserBucketAPI(Resource):
             if 'photo' in request.files:
                 feed['picture']=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True)
 
+ 	    db.session.flush()
             facebook_feed(feed, id, 'bucket', bkt.id)
-            logging_social(g.user, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
+            logging_social(g.user.id, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
             # bkt.fb_feed_id = resp['id']
 
         db.session.commit()
@@ -987,7 +993,7 @@ class UserBucketAPI(Resource):
         except:
             pass
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Bucket posted successfully.',
                 'data':data}, 201
@@ -1062,7 +1068,7 @@ class TodayListAPI(Resource):
         except:
             pass
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Get Today list succeed. (Count: '+str(len(data))+')',
                 'data':{
@@ -1097,7 +1103,7 @@ class TodayExistsAPI(Resource):
             for i in range(len(result)):
                 data.append(result[i][0])
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {"status":"success",
                 "description":"count: "+ str(len(result)),
                 "data":data}, 200
@@ -1134,7 +1140,7 @@ class TodayAPI(Resource):
         except:
             pass
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'succeed'}, 200
 
 api.add_resource(TodayListAPI, '/api/user/<user_id>/today', endpoint='todayList')
@@ -1173,7 +1179,7 @@ class UploadFiles(Resource):
             return {'status':'error',
                     'description':'Something went wrong'}, 500
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Upload Succeeded',
                 'data':{'id':f.id,
@@ -1246,7 +1252,7 @@ class BucketTimeline(Resource):
         except:
             pass
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description': str(len(result)) + ' posts were returned.',
                 'data':data}, 200
@@ -1381,8 +1387,8 @@ class BucketTimeline(Resource):
             elif b.cvr_img_id is not None:
                 feed['picture']=url_for('send_pic', img_id=b.cvr_img_id, img_type='origin', _external=True),
 
-            logging_social(g.user, "Facebook", "Share", "Timeline", inspect.stack()[0][3])
             facebook_feed(feed, g.user.id, 'timeline', post.id)
+            logging_social(g.user.id, "Facebook", "Share", "Timeline", inspect.stack()[0][3])
 
         db.session.commit()
 
@@ -1405,7 +1411,7 @@ class BucketTimeline(Resource):
         except:
             pass
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Successfully posted.',
                 'data':data}, 201
@@ -1445,7 +1451,7 @@ class TimelineContent(Resource):
                 'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'success',
                 'data':data}, 200
@@ -1555,12 +1561,12 @@ class TimelineContent(Resource):
                     print feed['picture']
 
                 facebook_feed(feed, g.user.id, 'timeline', post.id)
-                logging_social(g.user, 'Facebook', 'share', 'timeline', inspect.stack()[0][3])
+                logging_social(g.user.id, 'Facebook', 'share', 'timeline', inspect.stack()[0][3])
 
             elif params['fb_share'] in [False, 'false']:
                 if post.fb_feed_id is not None:
                     graph.delete_object(post.fb_feed_id)
-                    logging_social(g.user, 'Facebook', 'delete', 'timeline', inspect.stack()[0][3])
+                    logging_social(g.user.id, 'Facebook', 'delete', 'timeline', inspect.stack()[0][3])
                     setattr(post, 'fb_feed_id', None)
 
         try:
@@ -1585,7 +1591,7 @@ class TimelineContent(Resource):
                 'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'Post PUT success',
                 'data':data}, 201
@@ -1611,7 +1617,7 @@ class TimelineContent(Resource):
             return {'status':'error',
                     'description':'DB delete failed'}, 403
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description':'DELETE success'}, 201
 
@@ -1649,7 +1655,7 @@ class TimelineExists(Resource):
         data['maxDate'] = db.session.query(func.max(Post.date).label("max_date")).filter(Post.bucket_id==bucket_id).first().max_date
         data['dateList'] = dateList
 
-        logging_api(g.user, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description': 'Data successfully returned.',
                 'data':data}, 200

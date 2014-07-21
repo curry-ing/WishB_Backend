@@ -78,7 +78,7 @@
             var fillContents = function(data){
                 console.log(data);
                 if (data.cvr_img_url == null){
-                    data.cvr_img_url = 'http://masunghoon.iptime.org/image/0.origin'
+                    data.cvr_img_url = 'http://beta.wishb.net/image/0.origin'
                 }
 
                 $('#bookTitle').html(data.title);
@@ -104,7 +104,7 @@
 {#                    <li class="active"><a href="#">Home</a></li>#}
 {#                    <li><a href="#">About</a></li>#}
 {#                    <li><a href="{{ url_for('register') }}">가입하기</a></li>#}
-                    <li><a href="{{ url_for('register') }}">다운받</a></li>
+                    <li><a href="http://masunghoon.iptime.org:5001/file/Dream-release.apk">다운받기</a></li>
                 </ul>
                 <h3 class="text-muted">Wish B<small> :: {{ user.username }}님의 wish</small></h3>
             </div>

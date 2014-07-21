@@ -35,6 +35,7 @@ rauth
 facebook-sdk
 pymongo
 Image
+statsd
 #pycrypto
 #Flask-OpenID==1.1.1
 #psycopg2

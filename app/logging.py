@@ -10,15 +10,16 @@ from decorators import async
 mdb = MongoClient(MONGODB_URI).wishb
 
 @async
-def logging_auth(user, action, action_type):
-    if user is not None:
+def logging_auth(uid, action, action_type):
+    user = models.User.query.filter_by(id=uid).first()
+    if uid is not None:
         user_id = user.id
         email = user.email
         username = user.username
     else:
-        user_id = 'Anonymous'
+        user_id = ""
         email = ""
-        username = ""
+        username = "Anonymous"
     auth_log = mdb.auth_log
 
     log = {"user_id": user_id,
@@ -33,15 +34,16 @@ def logging_auth(user, action, action_type):
 
 
 @async
-def logging_api(user, api_name, request_type):
-    if user is not None:
-        user_id = user.id
-        email = user.email
-        username = user.username
+def logging_api(uid, api_name, request_type):
+    u = models.User.query.filter_by(id=uid).first()
+    if uid is not None:
+        user_id = u.id
+        email = u.email
+        username = u.username
     else:
-        user_id = 'Anonymous'
+        user_id = ""
         email = ""
-        username = ""
+        username = "Anonymous"
     api_log = mdb.api_log
 
     log = {"user_id": user_id,
@@ -56,15 +58,16 @@ def logging_api(user, api_name, request_type):
 
 
 @async
-def logging_social(user, service_name, action, target, type):
+def logging_social(uid, service_name, action, target, type):
+    user = models.User.query.filter_by(id=uid).first()
     if user is not None:
         user_id = user.id
         email = user.email
         username = user.username
     else:
-        user_id = 'Anonymous'
+        user_id = ""
         email = ""
-        username = ""
+        username = "Anonymous"
     social_log = mdb.social_log
 
     log = {"user_id": user_id,

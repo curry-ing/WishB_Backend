@@ -1,6 +1,7 @@
 __author__ = 'massinet'
 
 import facebook
+import time
 
 from flask import g
 from decorators import async
@@ -11,11 +12,6 @@ from models import User, UserSocial, Bucket, Post
 def facebook_feed(feed, user_id, obj_type, obj_id):
     social_user = UserSocial.query.filter_by(user_id=user_id).first()
     graph = facebook.GraphAPI(social_user.access_token)
-
-    if obj_type == 'bucket':
-        obj = Bucket.query.filter_by(id=obj_id).first()
-    elif obj_type == 'timeline':
-        obj = Post.query.filter_by(id=obj_id).first()
 
     if 'picture' not in feed:
         resp = graph.put_object("me","feed",
@@ -33,6 +29,14 @@ def facebook_feed(feed, user_id, obj_type, obj_id):
                                 description=feed['description'],
                                 name=feed['name'])
 
+    time.sleep(5)
+    db.session.commit()
+
+    if obj_type == 'bucket':
+        obj = Bucket.query.filter_by(id=obj_id).first()
+    elif obj_type == 'timeline':
+        obj = Post.query.filter_by(id=obj_id).first()
+    print obj
     obj.fb_feed_id = resp['id']
     db.session.commit()
 

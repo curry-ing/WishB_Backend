@@ -187,7 +187,7 @@ def get_resource():
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
 
-    logging_auth(g.user, "login", "total")
+    logging_auth(g.user.id, "login", "total")
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
                             'username': g.user.username,
@@ -245,7 +245,7 @@ def verify_password(username_or_token, password):
         if not user.verify_password(password):
             return False
         c.gauge('Email_Login', 1, delta=True)
-        logging_auth(user, "login", "email")
+        logging_auth(user.id, "login", "email")
 
     g.user = user
     return True

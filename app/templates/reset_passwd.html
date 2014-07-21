@@ -81,7 +81,7 @@
             var newPasswd = $("#resetPasswdInput").val();
             $.ajax({
                 type:'PUT',
-                url:'http://masunghoon.iptime.org/api/reset_password/{{ key }}',
+                url:'http://beta.wishb.net/api/reset_password/{{ key }}',
                 data:{password:newPasswd},
                 success:function(res){
                     alert(res.status + '\n' + res.description);  {# TODO: Change to Flash #}

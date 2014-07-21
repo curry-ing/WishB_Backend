@@ -161,7 +161,7 @@ class User(db.Model, UserMixin):
             user.profile_img_id = 0
             db.session.add(user)
             db.session.commit()
-            logging_auth(user, "register", "social_fb")
+            logging_auth(user.id, "register", "social_fb")
         else:
             if user.fb_id is None or user.fb_id == "":
                 user.fb_id = fb_id
@@ -169,7 +169,7 @@ class User(db.Model, UserMixin):
             if user.birthday is None or user.birthday == "":
                 user.birthday = birthday
                 db.session.commit()
-            logging_auth(user, "login", "social_fb")
+            logging_auth(user.id, "login", "social_fb")
         return user
 
 
