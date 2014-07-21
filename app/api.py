@@ -1378,14 +1378,13 @@ class BucketTimeline(Resource):
             feed={}
             feed['message'] = g.user.username.encode('utf-8') + " get closer to dream '" + b.title.encode('utf-8') + "' on Wish B"
             feed['link']= WISHB_SERVER_URI + "wish/" + str(b.id)
-            feed['picture']=url_for('send_pic', img_id=post.img_id, img_type='origin', _external=True)
             feed['caption']=b.title.encode('utf8')
             feed['description']="" if post.text is None else post.text.encode('utf-8')
             feed['name']="Wish B"
             if 'photo' in request.files:
-                feed['picture']=url_for('send_pic', img_id=post.img_id, img_type='origin', _external=True),
+                feed['picture']=url_for('send_pic', img_id=post.img_id, img_type='origin', _external=True)
             elif b.cvr_img_id is not None:
-                feed['picture']=url_for('send_pic', img_id=b.cvr_img_id, img_type='origin', _external=True),
+                feed['picture']=url_for('send_pic', img_id=b.cvr_img_id, img_type='origin', _external=True)
 
             facebook_feed(feed, g.user.id, 'timeline', post.id)
             logging_social(g.user.id, "Facebook", "Share", "Timeline", inspect.stack()[0][3])
@@ -1555,10 +1554,8 @@ class TimelineContent(Resource):
                 feed['name']="Wish B"
                 if post.img_id is not None:
                     feed['picture']=url_for('send_pic', img_id=post.img_id, img_type='origin', _external=True)
-                    print feed['picture']
                 elif b.cvr_img_id is not None:
                     feed['picture']=url_for('send_pic', img_id=b.cvr_img_id, img_type='origin', _external=True)
-                    print feed['picture']
 
                 facebook_feed(feed, g.user.id, 'timeline', post.id)
                 logging_social(g.user.id, 'Facebook', 'share', 'timeline', inspect.stack()[0][3])
