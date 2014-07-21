@@ -31,7 +31,6 @@ def facebook_feed(feed, user_id, obj_type, obj_id):
 
     time.sleep(5)
     db.session.commit()
-
     if obj_type == 'bucket':
         obj = Bucket.query.filter_by(id=obj_id).first()
     elif obj_type == 'timeline':
