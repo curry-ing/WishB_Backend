@@ -30,7 +30,7 @@ def logging_auth(uid, action, action_type):
            "log_dt": datetime.now()}
 
     auth_log.insert(log)
-    print "Authorization: " + str(user_id) + '|' + action + '|' + action_type
+    # print "Authorization: " + str(user_id) + '|' + action + '|' + action_type
 
 
 @async
@@ -54,7 +54,7 @@ def logging_api(uid, api_name, request_type):
            "log_dt":datetime.now()}
 
     api_log.insert(log)
-    print "API Call: " + str(user_id) + '|' + api_name + '|' + request_type
+    # print "API Call: " + str(user_id) + '|' + api_name + '|' + request_type
 
 
 @async
@@ -80,4 +80,4 @@ def logging_social(uid, service_name, action, target, type):
            "log_dt": datetime.now()}
 
     social_log.insert(log)
-    print "Social: " + str(user_id) + '|' + service_name + '|' + action + '|' + target
+    # print "Social: " + str(user_id) + '|' + service_name + '|' + action + '|' + target
