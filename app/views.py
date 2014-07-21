@@ -11,9 +11,10 @@ from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
+from logging import logging_auth
 from guess_language import guessLanguage
 
-from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET
+from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI
 
 from datetime import datetime
 
@@ -47,7 +48,7 @@ def get_locale():
 @app.route('/')
 @app.route('/index')
 def index():
-    c.incr('index')
+    c.gauge('Access_Index', 1, delta = True)
     return render_template('index.html', title='index')
 
 
@@ -68,6 +69,13 @@ def register():
 
 @app.route('/mokcha/<id>')
 def mokcha(id):
+    bkt = Bucket.query.filter_by(id=id).first()
+    user = User.query.filter_by(id=bkt.user_id).first()
+    return render_template('mokcha.html',id=id, title=bkt.title, user=user)
+
+
+@app.route('/wish/<id>')
+def wish(id):
     bkt = Bucket.query.filter_by(id=id).first()
     user = User.query.filter_by(id=bkt.user_id).first()
     return render_template('mokcha.html',id=id, title=bkt.title, user=user)
@@ -136,13 +144,17 @@ def internal_error(error):
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
-    profile_img = None
-    if g.user.fb_id is not None:
-        social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
-        graph = facebook.GraphAPI(social_user.access_token)
-        if g.user.profile_img_id is None:
+    if g.user.profile_img_id == 0:
+        if g.user.fb_id == 0:
+            profile_img = None
+        else:
+            social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
             args = {'type':'normal'}
             profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+    else:
+        profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+
     token = g.user.generate_auth_token()
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
@@ -156,7 +168,7 @@ def get_auth_token():
                                     'title_40':g.user.title_40,
                                     'title_50':g.user.title_50,
                                     'title_60':g.user.title_60,
-                                    'profile_img_url': profile_img if g.user.profile_img_id is None else url_for('send_pic',img_id=g.user.profile_img_id,img_type='thumb_sm', _external=True),
+                                    'profile_img_url': profile_img,
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -164,13 +176,18 @@ def get_auth_token():
 @app.route('/api/resource')
 @auth.login_required
 def get_resource():
-    profile_img = None
-    if g.user.fb_id is not None:
-        social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
-        graph = facebook.GraphAPI(social_user.access_token)
-        if g.user.profile_img_id is None:
+    if g.user.profile_img_id == 0:
+        if g.user.fb_id == 0:
+            profile_img = None
+        else:
+            social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+            graph = facebook.GraphAPI(social_user.access_token)
             args = {'type':'normal'}
             profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+    else:
+        profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+
+    logging_auth(g.user, "login", "total")
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
                             'username': g.user.username,
@@ -183,7 +200,7 @@ def get_resource():
                             'title_40':g.user.title_40,
                             'title_50':g.user.title_50,
                             'title_60':g.user.title_60,
-                            'profile_img_url': profile_img if g.user.profile_img_id is None else url_for('send_pic',img_id=g.user.profile_img_id,img_type='thumb_sm', _external=True),
+                            'profile_img_url': profile_img,
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
@@ -199,7 +216,7 @@ def verify_password(username_or_token, password):
             birthday = fb_user['birthday'][6:10] + fb_user['birthday'][0:2] + fb_user['birthday'][3:5]
             user = User.get_or_create(fb_user['email'], fb_user['name'], fb_user['id'], birthday)
             conn = httplib.HTTPSConnection("graph.facebook.com")
-            params = urllib.urlencode({'redirect_uri':'http://masunghoon.iptime.org:5001/',
+            params = urllib.urlencode({'redirect_uri':WISHB_SERVER_URI,
                                        'client_id':FB_CLIENT_ID,
                                        'client_secret':FB_CLIENT_SECRET,
                                        'grant_type':'fb_exchange_token',
@@ -211,6 +228,7 @@ def verify_password(username_or_token, password):
             longLivedAccessToken=resp_body.split('&')[0].split('=')[1]
 
             UserSocial.upsert_user(user.id, 'facebook', fb_user['id'], longLivedAccessToken)
+            c.gauge('Facebook_Login', 1, delta=True)
 
         else:
             return False
@@ -226,6 +244,8 @@ def verify_password(username_or_token, password):
             return False
         if not user.verify_password(password):
             return False
+        c.gauge('Email_Login', 1, delta=True)
+        logging_auth(user, "login", "email")
 
     g.user = user
     return True

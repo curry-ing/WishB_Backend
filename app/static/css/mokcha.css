@@ -88,7 +88,7 @@ body {
 }
 
 .bookCoverImg{
-    min-height: 600px;
+    min-height: 400px;
     background-size: cover;
     background-position: center center;
     color: white;
@@ -102,11 +102,21 @@ body {
     floating: left;
     left: 0px;
     top: 0px;
-    height: 200px;
+    height: 160px;
     z-index: 1;
-    padding: 10px 30px;
+    padding: 20px 30px;
     background: rgb(0, 0, 0);
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.5);
 }
 
+.bookTimeline {
+    margin-top: 50px;
+}
 
+.inline {
+    display: inline
+}
+
+#dueDate {
+    margin-left: 15px;
+}

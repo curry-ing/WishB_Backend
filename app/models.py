@@ -12,6 +12,8 @@ import re
 
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
 
+from logging import logging_auth
+
 db = SQLAlchemy(app)
 
 ROLE_USER = 0
@@ -156,8 +158,10 @@ class User(db.Model, UserMixin):
         user = User.query.filter_by(email=email).first()
         if user is None:
             user = User(email=email, username=username, fb_id=fb_id, birthday=birthday)
+            user.profile_img_id = 0
             db.session.add(user)
             db.session.commit()
+            logging_auth(user, "register", "social_fb")
         else:
             if user.fb_id is None or user.fb_id == "":
                 user.fb_id = fb_id
@@ -165,6 +169,7 @@ class User(db.Model, UserMixin):
             if user.birthday is None or user.birthday == "":
                 user.birthday = birthday
                 db.session.commit()
+            logging_auth(user, "login", "social_fb")
         return user
 
 
@@ -265,8 +270,9 @@ class UserSocial(db.Model):
             db.session.add(us)
             db.session.commit()
         else:
-            us.access_token = access_token;
+            us.access_token = access_token
             db.session.commit()
+
 
 whooshalchemy.whoosh_index(app, Post)
 

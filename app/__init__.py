@@ -20,7 +20,7 @@ app.config.from_object('config')
 
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
-from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, LANGUAGES, SECRET_KEY
+from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, LANGUAGES, SECRET_KEY, MONGODB_URI
 from app.models import db, Role, User
 from app.momentjs import momentjs
 

@@ -36,13 +36,13 @@
             data.append('photo',$("#photo")[0].files[0])
             $.ajax({
                 type:'POST',
-                url:'http://masunghoon.iptime.org:5001/api/file',
+                url:'http://masunghoon.iptime.org/api/file',
                 contentType: false,
                 processData: false,
                 data: data,
                 success:function(res){
                     alert(res.status + '\n' + res.description); {# TODO: Change to Flash #}
-                    window.location = 'http://masunghoon.iptime.org:5001/photo/' + res.data.id;
+                    window.location = 'http://masunghoon.iptime.org/photo/' + res.data.id;
                 },
                 error:function(res){
                     alert(res.responseJSON.status + '\n' + res.responseJSON.description);

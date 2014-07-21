@@ -9,9 +9,9 @@
         <meta name="author" content="">
 
         {% if title %}
-            <title>{{title}} - DreamProj.</title>
+            <title>{{title}} - Wish B.</title>
         {% else %}
-            <title>Dream Project</title>
+            <title>Wish B.</title>
         {% endif %}
 
         <!-- Bootstrap core CSS -->
@@ -36,6 +36,7 @@
         <script>
             $(document).ready(function(){
                 GetContents();
+{#                GetTimeline();#}
             });
 
             var GetContents = function(){
@@ -56,11 +57,41 @@
                 });
             }
 
+            var GetTimeline = function(){
+                $.ajax({
+                    url: '/api/bucket/' + {{ id }} + '/timeline',
+                    type: 'GET',
+                    beforeSend: function(xhr){
+                        var hash = $.base64.encode(localStorage.getItem('token') + ':unused');
+                        xhr.setRequestHeader("Authorization", "Basic " + hash);
+                    },
+                    success: function(data){
+                        fillTimeline(data.data);
+                    },
+                    error: function(jqXHR){
+                        console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                        return false;
+                    }
+                });
+            }
+
             var fillContents = function(data){
                 console.log(data);
+                if (data.cvr_img_url == null){
+                    data.cvr_img_url = 'http://masunghoon.iptime.org/image/0.origin'
+                }
+
                 $('#bookTitle').html(data.title);
                 $('#bookDesc').html(data.description);
+                $('#dueDate').html(data.deadline);
                 $('.bookCoverImg').css('background-image', 'url(' + data.cvr_img_url + ')');
+            }
+
+            var fillTimeline = function(data){
+                console.log(data);
+                for (var i in data){
+                    
+                }
             }
         </script>
     </head>
@@ -72,44 +103,30 @@
                 <ul class="nav nav-pills pull-right">
 {#                    <li class="active"><a href="#">Home</a></li>#}
 {#                    <li><a href="#">About</a></li>#}
-                    <li><a href="{{ url_for('register') }}">가입하기</a></li>
+{#                    <li><a href="{{ url_for('register') }}">가입하기</a></li>#}
+                    <li><a href="{{ url_for('register') }}">다운받</a></li>
                 </ul>
-                <h3 class="text-muted">꿈틀<small> - {{ user.username }}님의 꿈 이야기.</small></h3>
+                <h3 class="text-muted">Wish B<small> :: {{ user.username }}님의 wish</small></h3>
             </div>
 
             <div class="bookCoverImg">
                 <div class="mokchaTitle">
-                    <h2><span id="bookTitle"></span></h2>
+                    <h2 class="inline"><span id="bookTitle"></span></h2>
+                    <h4 class="inline"><span id="dueDate"></span></h4>
                     <p class="lead" id="bookDesc"></p>
                 </div>
             </div>
 
-            <div class="row BookTimeline">
-                <div class="col-lg-6">
-                    <h4>Subheading</h4>
-                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-                    <h4>Subheading</h4>
-                    <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-                    <h4>Subheading</h4>
-                    <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
-                </div>
-
-                <div class="col-lg-6">
-                    <h4>Subheading</h4>
-                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-                    <h4>Subheading</h4>
-                    <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-                    <h4>Subheading</h4>
-                    <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
-                </div>
+            <div class="row bookTimeline">
+{#                <span class="wishTimeline">위시 기록장</span>#}
+{#                <div class="col-lg-12 ">#}
+{#                    <h4>Subheading</h4>#}
+{#                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>#}
+{#                </div>#}
             </div>
 
             <div class="footer">
-                <p>&copy; Company 2014</p>
+                <p>&copy; Wish B. 2014</p>
             </div>
 
         </div> <!-- /container -->
