@@ -169,6 +169,7 @@ def get_auth_token():
                                     'title_50':g.user.title_50,
                                     'title_60':g.user.title_60,
                                     'profile_img_url': profile_img,
+                                    'fb_id':None if g.fb_id is None else g.fb_id,
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -201,6 +202,7 @@ def get_resource():
                             'title_50':g.user.title_50,
                             'title_60':g.user.title_60,
                             'profile_img_url': profile_img,
+                            'fb_id':None if g.fb_id is None else g.fb_id,
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
@@ -361,6 +363,13 @@ def send_pic(img_id,img_type):
 
 
     return send_from_directory(path, filename)
+
+@app.route('/file/<filename>.<extension>')
+def send_file(filename, extension):
+    file = filename + '.' + extension
+    basedir = os.path.abspath('app/static/uploads/files')
+
+    return send_from_directory(basedir, file)
 
 
 # @app.route('/photo/<id>')
