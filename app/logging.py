@@ -11,8 +11,8 @@ mdb = MongoClient(MONGODB_URI).wishb
 
 @async
 def logging_auth(uid, action, action_type):
-    user = models.User.query.filter_by(id=uid).first()
     if uid is not None:
+    	user = models.User.query.filter_by(id=uid).first()
         user_id = user.id
         email = user.email
         username = user.username
@@ -35,8 +35,8 @@ def logging_auth(uid, action, action_type):
 
 @async
 def logging_api(uid, api_name, request_type):
-    u = models.User.query.filter_by(id=uid).first()
     if uid is not None:
+    	u = models.User.query.filter_by(id=uid).first()
         user_id = u.id
         email = u.email
         username = u.username
@@ -59,8 +59,8 @@ def logging_api(uid, api_name, request_type):
 
 @async
 def logging_social(uid, service_name, action, target, type):
-    user = models.User.query.filter_by(id=uid).first()
-    if user is not None:
+    if uid is not None:
+    	user = models.User.query.filter_by(id=uid).first()
         user_id = user.id
         email = user.email
         username = user.username
