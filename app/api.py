@@ -82,12 +82,12 @@ class VerificationAPI(Resource):
             g.user = None
         try:
             if User.email_exists(emailAddr):
-                logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
+                logging_api(None, self.__class__.__name__, inspect.stack()[0][3])
                 return {'status':'success',
                         'data':'0',
                         'description':'Email already exists'}, 200
             else:
-                logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
+                logging_api(None, self.__class__.__name__, inspect.stack()[0][3])
                 return {'status':'success',
                         'data':'1',
                         'description':'Available Email Address'}, 200

@@ -1,7 +1,5 @@
 __author__ = 'masunghoon'
 
-import models
-
 from datetime import datetime
 from pymongo import MongoClient
 from config import MONGODB_URI
@@ -11,20 +9,11 @@ mdb = MongoClient(MONGODB_URI).wishb
 
 @async
 def logging_auth(uid, action, action_type):
-    user = models.User.query.filter_by(id=uid).first()
-    if uid is not None:
-        user_id = user.id
-        email = user.email
-        username = user.username
-    else:
-        user_id = ""
-        email = ""
-        username = "Anonymous"
+    if uid is None:
+        uid = "Anonymous"
     auth_log = mdb.auth_log
 
-    log = {"user_id": user_id,
-           "email": email,
-           "username": username,
+    log = {"user_id": uid,
            "action": action,
            "action_type": action_type,
            "log_dt": datetime.now()}
@@ -35,20 +24,11 @@ def logging_auth(uid, action, action_type):
 
 @async
 def logging_api(uid, api_name, request_type):
-    u = models.User.query.filter_by(id=uid).first()
-    if uid is not None:
-        user_id = u.id
-        email = u.email
-        username = u.username
-    else:
-        user_id = ""
-        email = ""
-        username = "Anonymous"
+    if uid is None:
+        uid = "Anonymous"
     api_log = mdb.api_log
 
-    log = {"user_id": user_id,
-           "email": email,
-           "username": username,
+    log = {"user_id": uid,
            "api_name":api_name,
            "request_type":str.upper(request_type),
            "log_dt":datetime.now()}
@@ -58,21 +38,12 @@ def logging_api(uid, api_name, request_type):
 
 
 @async
-def logging_social(uid, service_name, action, target, type):
-    user = models.User.query.filter_by(id=uid).first()
-    if user is not None:
-        user_id = user.id
-        email = user.email
-        username = user.username
-    else:
-        user_id = ""
-        email = ""
-        username = "Anonymous"
+def logging_social(uid, service_name, action, target, type): 
+    if uid is None:
+    	uid = "Anonymous"
     social_log = mdb.social_log
 
-    log = {"user_id": user_id,
-           "email": email,
-           "username": username,
+    log = {"user_id": uid,
            "service_name": service_name,
            "action": str.upper(action),
            "target": target,
