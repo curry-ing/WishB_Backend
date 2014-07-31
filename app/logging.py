@@ -81,3 +81,13 @@ def logging_social(uid, service_name, action, target, type):
 
     social_log.insert(log)
     # print "Social: " + str(user_id) + '|' + service_name + '|' + action + '|' + target
+
+
+@async
+def logging_downlaod(ip_addr):
+    download_log = mdb.download_log
+
+    log = {"ip_addr": ip_addr,
+           "log_dt": datetime.now()}
+
+    download_log.insert(log)

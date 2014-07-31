@@ -11,7 +11,7 @@ from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
-from logging import logging_auth
+from logging import logging_auth, logging_downlaod
 from guess_language import guessLanguage
 
 from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI
@@ -366,6 +366,8 @@ def send_pic(img_id,img_type):
 
 @app.route('/file/<filename>.<extension>')
 def send_file(filename, extension):
+    print "1111"
+    logging_downlaod(request.remote_addr)
     file = filename + '.' + extension
     basedir = os.path.abspath('app/static/uploads/files')
 

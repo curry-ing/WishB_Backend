@@ -1200,8 +1200,9 @@ class BucketTimeline(Resource):
     def get(self, bucket_id):
         if request.authorization is not None:
             g.user = User.verify_auth_token(request.authorization['username'])
+            uid = g.user.id
         else:
-            g.user = None
+            uid = None
         b = Bucket.query.filter_by(id=bucket_id).first()
         if b is None:
             return {'status':'error',
@@ -1252,7 +1253,7 @@ class BucketTimeline(Resource):
         except:
             pass
 
-        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
+        logging_api(uid, self.__class__.__name__, inspect.stack()[0][3])
         return {'status':'success',
                 'description': str(len(result)) + ' posts were returned.',
                 'data':data}, 200
