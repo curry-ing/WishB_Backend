@@ -6,6 +6,8 @@ import facebook
 import os
 import statsd
 import inspect
+import json
+from bson import json_util
 
 from flask import request, g, url_for
 from flask.ext.httpauth import HTTPBasicAuth
@@ -19,9 +21,10 @@ from sqlalchemy.sql import func
 from app import db, api, app
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
-from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE, WISHB_SERVER_URI
+from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE, WISHB_SERVER_URI, MONGODB_URI
 from logging import logging_auth, logging_api, logging_social
 from social import facebook_feed
+from pymongo import MongoClient
 
 from PIL import Image
 
@@ -30,6 +33,8 @@ configure_uploads(app, photos)
 patch_request_class(app, size=MAX_UPLOAD_SIZE) #File Upload Size = Up to 2MB
 
 stsd = statsd.StatsClient('localhost', 8125)
+
+mdb = MongoClient(MONGODB_URI).wishb
 
 ##### AUTHENTICATION #######################################
 
@@ -1662,3 +1667,64 @@ class TimelineExists(Resource):
 api.add_resource(BucketTimeline, '/api/bucket/<bucket_id>/timeline', endpoint='bucketTimeline')
 api.add_resource(TimelineContent, '/api/content/<content_id>', endpoint='timelineContent')
 api.add_resource(TimelineExists, '/api/bucket/<bucket_id>/timeline/exists', endpoint='timelineExists')
+
+
+class Report(Resource):
+
+    def __init__(self):
+        super(Report, self).__init__()
+
+    def get(self):
+        mdb = MongoClient(MONGODB_URI).wishb
+        data = []
+
+        if 'page' in request.args:
+            for result in mdb.report.find({'type':request.args['type']})\
+                                  .sort("_id", -1).skip(POSTS_PER_PAGE*int(request.args['page'])).limit(POSTS_PER_PAGE):
+                 data.append(result)
+        else:
+            return {'status':'error', 'description':'PAGE NUMBER required'}, 400
+
+        return {'status':'success', 'data':json.dumps(data, default=json_util.default)}, 200
+
+
+    def post(self):
+        if request.json:
+            params = request.json
+        elif request.form:
+            params = request.form
+        else:
+            return {'status':'error',
+                    'description':'Request Failed!'}, 400
+
+        for key in params:
+            params[key] = None if params[key] == "" else params[key]
+
+        if not 'type' in params or params['type'] == None:
+            return {'status':'error', 'description': 'Report [TYPE] is required'}, 400
+        elif params['type'] not in ['inquiry', 'crash']:
+            return {'status':'error', 'description': 'Report type is not valid.'}, 400
+
+        if not 'report' in params or params['report'] == None:
+            return {'status':'error', 'description': 'content of [REPORT] is required'}, 400
+
+        if not 'email' in params or params['email'] == None:
+            try:
+                params['email'] = g.user.email
+            except:
+                params['email'] = 'AnonymousUser'
+
+
+        data = params
+        data['ret_dt'] = datetime.datetime.now()
+
+        try:
+            mdb = MongoClient(MONGODB_URI).wishb
+            mdb.report.insert(data)
+        except:
+            return {'status':'error', 'description':'something went wrong'}, 500
+
+        return {'status':'success', 'data':json.dumps(data, default=json_util.default)}, 200
+
+
+api.add_resource(Report, '/api/report', endpoint='report')
