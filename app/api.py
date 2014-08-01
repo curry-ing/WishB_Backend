@@ -1678,14 +1678,19 @@ class Report(Resource):
         mdb = MongoClient(MONGODB_URI).wishb
         data = []
 
+        if not 'type' in request.args or request.args['type'] == None:
+            return {'status':'error', 'description': 'Report [TYPE] is required'}, 400
+        elif request.args['type'] not in ['inquiry', 'crash']:
+            return {'status':'error', 'description': 'Report type is not valid.'}, 400
+
         if 'page' in request.args:
             for result in mdb.report.find({'type':request.args['type']})\
                                   .sort("_id", -1).skip(POSTS_PER_PAGE*int(request.args['page'])).limit(POSTS_PER_PAGE):
-                 data.append(result)
+                data.append(json.loads(json_util.dumps(result)))
         else:
             return {'status':'error', 'description':'PAGE NUMBER required'}, 400
 
-        return {'status':'success', 'data':json.dumps(data, default=json_util.default)}, 200
+        return {'status':'success', 'data':data}, 200
 
 
     def post(self):
@@ -1724,7 +1729,7 @@ class Report(Resource):
         except:
             return {'status':'error', 'description':'something went wrong'}, 500
 
-        return {'status':'success', 'data':json.dumps(data, default=json_util.default)}, 200
+        return {'status':'success', 'data':json.loads(json_util.dumps(data))}, 200
 
 
 api.add_resource(Report, '/api/report', endpoint='report')
