@@ -1705,8 +1705,8 @@ class Report(Resource):
         elif params['type'] not in ['inquiry', 'crash']:
             return {'status':'error', 'description': 'Report type is not valid.'}, 400
 
-        if not 'report' in params or params['report'] == None:
-            return {'status':'error', 'description': 'content of [REPORT] is required'}, 400
+        if not 'subject' in params or params['subject'] == None:
+            return {'status':'error', 'description': 'content of [SUBJECT] is required'}, 400
 
         if not 'email' in params or params['email'] == None:
             try:
