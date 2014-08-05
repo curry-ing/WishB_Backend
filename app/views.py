@@ -81,6 +81,11 @@ def wish(id):
     return render_template('mokcha.html',id=id, title=bkt.title, user=user)
 
 
+@app.route('/inquiry')
+def inquiry():
+    return render_template('inquiry.html')
+
+
 ##### SEARCHING #############################################
 @app.route('/search', methods=['POST'])
 @auth.login_required

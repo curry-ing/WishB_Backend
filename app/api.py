@@ -1721,12 +1721,14 @@ class Report(Resource):
 
 
         data = params
-        data['ret_dt'] = datetime.datetime.now()
+        data['reg_dt'] = datetime.datetime.now()
 
         try:
+            print data
             mdb = MongoClient(MONGODB_URI).wishb
             mdb.report.insert(data)
         except:
+            print data
             return {'status':'error', 'description':'something went wrong'}, 500
 
         return {'status':'success', 'data':json.loads(json_util.dumps(data))}, 200
