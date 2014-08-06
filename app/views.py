@@ -49,8 +49,9 @@ def get_locale():
 @app.route('/')
 @app.route('/index')
 def index():
-    c.gauge('Access_Index', 1, delta = True)
-    return render_template('index.html', title='index')
+    return render_template('404.html'), 404
+    # c.gauge('Access_Index', 1, delta = True)
+    # return render_template('index.html', title='index')
 
 
 @app.route('/login_new')
@@ -161,6 +162,7 @@ def get_auth_token():
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
 
+    latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
     token = g.user.generate_auth_token()
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
@@ -176,7 +178,8 @@ def get_auth_token():
                                     'title_60':g.user.title_60,
                                     'profile_img_url': profile_img,
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
-                                    'latest_app_ver':MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])['version'],
+                                    'latest_app':{'version':latest_app['version'],
+                                                  'url':latest_app['url']},
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -196,6 +199,7 @@ def get_resource():
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
 
     logging_auth(g.user.id, "login", "total")
+    latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
                             'username': g.user.username,
@@ -210,7 +214,8 @@ def get_resource():
                             'title_60':g.user.title_60,
                             'profile_img_url': profile_img,
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
-                            'latest_app_ver':MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])['version'],
+                            'latest_app':{'version':latest_app['version'],
+                                          'url':latest_app['url']},
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
