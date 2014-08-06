@@ -1684,12 +1684,13 @@ class Report(Resource):
             return {'status':'error', 'description': 'Report type is not valid.'}, 400
 
         if 'page' in request.args:
-            for result in mdb.report.find({'type':request.args['type']})\
-                                  .sort("_id", -1).skip(POSTS_PER_PAGE*int(request.args['page'])).limit(POSTS_PER_PAGE):
+            for result in mdb.report.find({'type':request.args['type']}).sort("_id", -1).skip(POSTS_PER_PAGE*2*int(request.args['page'])).limit(POSTS_PER_PAGE*2):
                 data.append(json.loads(json_util.dumps(result)))
         else:
             return {'status':'error', 'description':'PAGE NUMBER required'}, 400
 
+        # if len(data) == 0:
+        #     return {'status':'error', 'description':'Data not found'}, 204
         return {'status':'success', 'data':data}, 200
 
 
@@ -1724,14 +1725,61 @@ class Report(Resource):
         data['reg_dt'] = datetime.datetime.now()
 
         try:
-            print data
             mdb = MongoClient(MONGODB_URI).wishb
             mdb.report.insert(data)
         except:
-            print data
             return {'status':'error', 'description':'something went wrong'}, 500
 
         return {'status':'success', 'data':json.loads(json_util.dumps(data))}, 200
 
 
 api.add_resource(Report, '/api/report', endpoint='report')
+
+
+class Release(Resource):
+
+    def __init__(self):
+        super(Release, self).__init__()
+
+    def get(self):
+        mdb = MongoClient(MONGODB_URI).wishb
+
+        if not 'os' in request.args or request.args['os'] == None:
+            return {'status':'error', 'description': '[OS] type is required'}, 400
+        elif request.args['os'] not in ['ios', 'android']:
+            return {'status':'error', 'description': '[OS] type is not valid.'}, 400
+
+        if not 'version' in request.args or request.args['version'] == None:
+            return {'status':'error', 'description': 'Release [VERSION] required'}, 400
+
+        if request.args['version'] == 'latest':
+            data = mdb.release.find_one(sort=[("version", -1)])
+        else:
+            data = mdb.release.find_one({'version':request.args['version']})
+
+        return {'status':'success', 'data':json.loads(json_util.dumps(data))}, 200
+
+    def post(self):
+        if request.form:
+            params = request.form
+        else:
+            return {'status':'error',
+                    'description':'Request Failed!'}, 400
+
+        for key in params:
+            params[key] = None if params[key] == "" else params[key]
+
+        data = params
+        data['release_dt'] = datetime.datetime.now()
+        data['version'] = request.args['version']
+        data['url'] = request.args['url']
+
+        try:
+            mdb = MongoClient(MONGODB_URI).wishb
+            mdb.release.insert(data)
+        except:
+            return {'status':'error','description':'something went wrong'}, 500
+
+        return {'status':'success','data':json.loads(json_util.dumps(data))}
+
+api.add_resource(Release, '/api/release', endpoint='release')

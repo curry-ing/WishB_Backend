@@ -13,8 +13,9 @@ from emails import follower_notification
 from translate import microsoft_translate
 from logging import logging_auth, logging_downlaod
 from guess_language import guessLanguage
+from pymongo import MongoClient
 
-from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI
+from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI, MONGODB_URI
 
 from datetime import datetime
 
@@ -175,6 +176,7 @@ def get_auth_token():
                                     'title_60':g.user.title_60,
                                     'profile_img_url': profile_img,
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
+                                    'latest_app_ver':MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])['version'],
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -208,6 +210,7 @@ def get_resource():
                             'title_60':g.user.title_60,
                             'profile_img_url': profile_img,
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
+                            'latest_app_ver':MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])['version'],
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
