@@ -1720,7 +1720,6 @@ class Report(Resource):
             except:
                 params['email'] = 'AnonymousUser'
 
-
         data = params
         data['reg_dt'] = datetime.datetime.now()
 
@@ -1783,3 +1782,52 @@ class Release(Resource):
         return {'status':'success','data':json.loads(json_util.dumps(data))}
 
 api.add_resource(Release, '/api/release', endpoint='release')
+
+
+class NoticeList(Resource):
+
+    def __init__(self):
+        super(NoticeList, self).__init__()
+
+    def get(self):
+        mdb = MongoClient(MONGODB_URI).wishb
+
+        data = []
+        if 'page' in request.args:
+            for result in mdb.notice.find().sort("_id", -1).skip(POSTS_PER_PAGE*2*int(request.args['page'])).limit(POSTS_PER_PAGE*2):
+                data.append(json.loads(json_util.dumps(result)))
+        else:
+            for result in mdb.notice.find().sort("_id", -1):
+                data.append(json.loads(json_util.dumps(result)))
+
+        return {'status':'success', 'data':data}, 200
+
+    def post(self):
+        if request.json:
+            params = request.json
+        elif request.form:
+            params = request.form
+        else:
+            return {'status':'error', 'description':'Request Failed!'}, 400
+
+        data = {}
+        for key in params:
+            data[key] = None if params[key] == "" else params[key]
+
+        if not 'subject' in data or data['subject'] == None:
+            return {'status':'error', 'description': 'Notice [SUBJECT] is required'}, 400
+
+        if not 'content' in data or data['content'] == None:
+            return {'status':'error', 'description': 'Notice [CONTENT] is required'}, 400
+
+        data['reg_dt'] = datetime.datetime.now()
+
+        try:
+            mdb = MongoClient(MONGODB_URI).wishb
+            mdb.notice.insert(data)
+        except:
+            return {'status':'error', 'description':'something went wrong'}, 500
+
+        return {'status':'success', 'data':json.loads(json_util.dumps(data))}, 200
+
+api.add_resource(NoticeList, '/api/noticelist', endpoint='noticelist')

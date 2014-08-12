@@ -47,11 +47,12 @@ def get_locale():
 
 ##### VIEW ##################################################
 @app.route('/')
-@app.route('/index')
+@app.route('/indexx')
 def index():
-    return render_template('404.html'), 404
+    # return render_template('404.html'), 404
     # c.gauge('Access_Index', 1, delta = True)
     # return render_template('index.html', title='index')
+    return redirect("http://www.wishb.net", 302)
 
 
 @app.route('/login_new')
@@ -87,6 +88,13 @@ def wish(id):
 def inquiry():
     return render_template('inquiry.html')
 
+@app.route('/notice')
+def notice_list():
+    return render_template('notice_list.html')
+
+@app.route('/notice/write')
+def notice():
+    return render_template('notice_write.html')
 
 ##### SEARCHING #############################################
 @app.route('/search', methods=['POST'])
@@ -379,7 +387,6 @@ def send_pic(img_id,img_type):
 
 @app.route('/file/<filename>.<extension>')
 def send_file(filename, extension):
-    print "1111"
     logging_downlaod(request.remote_addr)
     file = filename + '.' + extension
     basedir = os.path.abspath('app/static/uploads/files')
