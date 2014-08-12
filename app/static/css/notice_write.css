@@ -121,7 +121,20 @@ body {
 }
 
 .body{
-    padding-top: 30px;
+    padding-top: 20px;
     padding-bottom: 20px;
+    overflow: hidden;
 }
 
+#noticeWriteBtn, #noticeSubmitBtn, #cancelBtn{
+    float: right;
+    margin-right: 5px;
+}
+
+#noticeTable tbody:hover {
+    cursor: pointer;
+}
+
+.modal-dialog{
+    margin-top: 100px;
+}
