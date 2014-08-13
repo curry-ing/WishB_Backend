@@ -186,6 +186,7 @@ def get_auth_token():
                                     'title_60':g.user.title_60,
                                     'profile_img_url': profile_img,
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
+                                    'fb_token':None if g.user.fb_id is None else social_user.access_token,
                                     'latest_app':{'version':latest_app['version'],
                                                   'url':latest_app['url']},
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
@@ -222,6 +223,7 @@ def get_resource():
                             'title_60':g.user.title_60,
                             'profile_img_url': profile_img,
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
+                            'fb_token':None if g.user.fb_id is None else social_user.access_token,
                             'latest_app':{'version':latest_app['version'],
                                           'url':latest_app['url']},
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
