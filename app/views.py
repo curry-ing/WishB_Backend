@@ -159,6 +159,7 @@ def internal_error(error):
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
+    fb_token = None
     if g.user.profile_img_id == 0:
         if g.user.fb_id == 0:
             profile_img = None
@@ -167,8 +168,12 @@ def get_auth_token():
             graph = facebook.GraphAPI(social_user.access_token)
             args = {'type':'normal'}
             profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+            fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+        if g.user_fb_id is not None or g.user.fb_id != 0:
+            fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
+
 
     latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
     token = g.user.generate_auth_token()
@@ -186,7 +191,7 @@ def get_auth_token():
                                     'title_60':g.user.title_60,
                                     'profile_img_url': profile_img,
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
-                                    'fb_token':None if g.user.fb_id is None else social_user.access_token,
+                                    'fb_token':fb_token,
                                     'latest_app':{'version':latest_app['version'],
                                                   'url':latest_app['url']},
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
@@ -196,6 +201,7 @@ def get_auth_token():
 @app.route('/api/resource')
 @auth.login_required
 def get_resource():
+    fb_token = None
     if g.user.profile_img_id == 0:
         if g.user.fb_id == 0:
             profile_img = None
@@ -204,8 +210,11 @@ def get_resource():
             graph = facebook.GraphAPI(social_user.access_token)
             args = {'type':'normal'}
             profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+            fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+        if g.user_fb_id is not None or g.user.fb_id != 0:
+            fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
     latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
@@ -223,7 +232,7 @@ def get_resource():
                             'title_60':g.user.title_60,
                             'profile_img_url': profile_img,
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
-                            'fb_token':None if g.user.fb_id is None else social_user.access_token,
+                            'fb_token':fb_token,
                             'latest_app':{'version':latest_app['version'],
                                           'url':latest_app['url']},
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
@@ -472,6 +481,7 @@ def unfollow(username):
     db.session.commit()
     flash('You have stopped following ' + username + '.')
     return redirect(url_for('userprofile', username=g.user.username))
+
 
 
 # @app.route('/index', methods=['GET', 'POST'])
