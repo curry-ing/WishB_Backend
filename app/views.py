@@ -171,7 +171,7 @@ def get_auth_token():
             fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
-        if g.user_fb_id is not None or g.user.fb_id != 0:
+        if g.user.fb_id is not None or g.user.fb_id != 0:
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
 
