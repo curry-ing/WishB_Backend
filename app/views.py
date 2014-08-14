@@ -406,7 +406,7 @@ def send_file(filename, extension):
         else:
             apk = MongoClient(MONGODB_URI).wishb.release.find_one({"version":extension})
         basedir = os.path.abspath('app/static/uploads/files/apk')
-        file = apk.filename
+        file = apk['filename']
     else:
         basedir = os.path.abspath('app/static/uploads/files')
         file = filename + '.' + extension
