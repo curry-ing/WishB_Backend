@@ -213,7 +213,7 @@ def get_resource():
             fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
-        if g.user_fb_id is not None or g.user.fb_id != 0:
+        if g.user.fb_id is not None or g.user.fb_id != 0:
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
@@ -405,8 +405,7 @@ def send_file(filename, extension):
             apk = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
         else:
             apk = MongoClient(MONGODB_URI).wishb.release.find_one({"version":extension})
-        basedir = os.path.abspath('app/static/uploads/files/apk')
-        file = apk['filename']
+        return redirect(apk['url'], 302)
     else:
         basedir = os.path.abspath('app/static/uploads/files')
         file = filename + '.' + extension
