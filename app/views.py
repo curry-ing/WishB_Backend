@@ -399,8 +399,17 @@ def send_pic(img_id,img_type):
 @app.route('/file/<filename>.<extension>')
 def send_file(filename, extension):
     logging_downlaod(request.remote_addr)
-    file = filename + '.' + extension
-    basedir = os.path.abspath('app/static/uploads/files')
+
+    if filename == 'wishb_apk':
+        if extension == 'latest':
+            apk = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
+        else:
+            apk = MongoClient(MONGODB_URI).wishb.release.find_one({"version":extension})
+        basedir = os.path.abspath('app/static/uploads/files/apk')
+        file = apk.filename
+    else:
+        basedir = os.path.abspath('app/static/uploads/files')
+        file = filename + '.' + extension
 
     return send_from_directory(basedir, file)
 
