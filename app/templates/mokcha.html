@@ -1,6 +1,5 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="App">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -22,6 +21,8 @@
 
 
         <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.17/angular.min.js"></script>
+        <script src="{{ url_for('.static', filename='js/ng-infinite-scroll.min.js') }}"></script>
         <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
         <script src="{{ url_for('.static', filename='js/jquery.base64.js') }}"></script>
 
@@ -37,6 +38,42 @@
             $(document).ready(function(){
                 GetContents();
 {#                GetTimeline();#}
+            });
+
+            var app = angular.module('App', ['infinite-scroll']);
+            var hash = $.base64.encode(localStorage.getItem('token') + ':unused');
+
+            app.config(function($interpolateProvider) {
+                  $interpolateProvider.startSymbol('//');
+                  $interpolateProvider.endSymbol('//');
+            });
+
+            app.controller('timelineCtrl', function($scope, Timeline){
+                $scope.timeline= new Timeline();
+            });
+
+            app.factory('Timeline', function($http){
+                var Timeline = function(){
+                    this.items = [];
+                    this.busy = false;
+                    this.after = 1;
+                };
+
+                Timeline.prototype.nextPage = function () {
+                    if(this.busy) return;
+                    this.busy = true;
+
+                    var url = '/api/bucket/' + {{ id }} + '/timeline?page=' + this.after;
+
+                    $http.get(url, {headers:{'Authorization':'Basic ' + hash}}).success(function(data, status){
+                        for (var i=0; i<data.data.timelineData.length; i++){
+                            this.items.push(data.data.timelineData[i]);
+                        }
+                        this.busy = false;
+                        this.after++;
+                    }.bind(this));
+                };
+                return Timeline;
             });
 
             var GetContents = function(){
@@ -76,7 +113,6 @@
             }
 
             var fillContents = function(data){
-                console.log(data);
                 if (data.cvr_img_url == null){
                     data.cvr_img_url = 'http://beta.wishb.net/image/0.origin'
                 }
@@ -88,7 +124,6 @@
             }
 
             var fillTimeline = function(data){
-                console.log(data);
                 for (var i in data){
                     
                 }
@@ -117,12 +152,15 @@
                 </div>
             </div>
 
-            <div class="row bookTimeline">
-{#                <span class="wishTimeline">위시 기록장</span>#}
-{#                <div class="col-lg-12 ">#}
-{#                    <h4>Subheading</h4>#}
-{#                    <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>#}
-{#                </div>#}
+            <div class="row bookTimeline" ng-controller="timelineCtrl">
+                <div infinite-scroll='timeline.nextPage()' infinite-scroll-disabled='timeline.busy' infinite-scroll-distance='1'>
+                    <h4 class="wishTimeline">위시 기록장</h4>
+                    <div class="col-lg-12" ng-repeat="item in timeline.items">
+                        <h6>// item.reg_dt //</h6>
+                        <img src="// item.img_url //">
+                        <p>// item.text //</p>
+                    </div>
+                </div>
             </div>
 
             <div class="footer">

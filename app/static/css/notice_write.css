@@ -126,7 +126,8 @@ body {
     overflow: hidden;
 }
 
-#noticeWriteBtn, #noticeSubmitBtn, #cancelBtn{
+#noticeWriteBtn, #noticeSubmitBtn, #cancelBtn,
+#inquiryWriteBtn, #inquirySubmitBtn{
     float: right;
     margin-right: 5px;
 }

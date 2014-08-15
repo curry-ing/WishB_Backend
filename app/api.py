@@ -1204,7 +1204,12 @@ class BucketTimeline(Resource):
 
     def get(self, bucket_id):
         if request.authorization is not None:
-            g.user = User.verify_auth_token(request.authorization['username'])
+            print request.authorization
+            print User.verify_auth_token(request.authorization['username'])
+            if request.authorization['password'] == 'unused':
+                g.user = User.verify_auth_token(request.authorization['username'])
+            else:
+                g.user = User.query.filter_by(email=request.authorization['username']).first()
             uid = g.user.id
         else:
             uid = None

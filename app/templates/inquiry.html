@@ -36,10 +36,48 @@
         <![endif]-->
         <script>
             $(document).ready(function(){
-{#                GetContents();#}
+                if(!CheckAuthentication()){
+                    alert("Authentication Failed");
+                    window.history.back();
+                }
             });
 
+            var CheckAuthentication = function(){
+                var auth_succeed;
+                if (localStorage.getItem('token')){
+                    var auth_token = localStorage.getItem('token');
+                    var hash = $.base64.encode(auth_token + ':unused');
+                    $.ajax({
+                        url: '/api/resource',
+                        type: 'GET',
+                        async: false,
+                        beforeSend: function(xhr){
+                            xhr.setRequestHeader("Authorization", "Basic "+hash);
+                        },
+                        success: function(data){
+                            if(data.data.is_admin == 0){
+                                auth_succeed = false;
+                            } else {
+{#                                localStorage.removeItem('id', 'email', 'username');#}
+{#                                localStorage.setItem('id', data.data.id);#}
+{#                                localStorage.setItem('username', data.data.username);#}
+{#                                localStorage.setItem('email', data.data.email);#}
+                                auth_succeed = true;
+                            }
+                        },
+                        error: function(jqXHR){
+                            console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                            auth_succeed = false;
+                        }
+                    });
+                } else {
+                    auth_succeed = false;
+                }
+                return auth_succeed;
+            };
+
             var app = angular.module('App', ['infinite-scroll']);
+            var hash = $.base64.encode(localStorage.getItem('token') + ':unused');
 
             app.config(function($interpolateProvider) {
                   $interpolateProvider.startSymbol('//');
@@ -48,7 +86,7 @@
 
 
             app.controller('inquiryCtrl', function($scope, $http){
-                $http.get('/api/report?type=inquiry&page=0').success(function(data){
+                $http.get('/api/report?type=inquiry&page=0', {headers: {'Authorization':'Basic ' + hash}}).success(function(data){
                     $scope.inquiryList = data.data;
                 });
             });
@@ -76,7 +114,7 @@
 
                     var url = "/api/report?type=crash&page=" + this.after;
 
-                    $http.get(url).success(function(data, status){
+                    $http.get(url, {headers:{'Authorization':'Basic ' + hash}}).success(function(data, status){
                         for (var i=0; i<data.data.length; i++){
                             this.items.push(data.data[i]);
                         }
@@ -86,28 +124,6 @@
                 };
                 return Reddit;
             });
-
-
-            var GetContents = function(){
-                $.ajax({
-                    url: '/api/report',
-                    type: 'GET',
-                    data: {type:"inquiry",
-                           page:1},
-                    beforeSend: function(xhr){
-                        var hash = $.base64.encode(localStorage.getItem('token') + ':unused');
-                        xhr.setRequestHeader("Authorization", "Basic " + hash);
-                    },
-                    success: function(data){
-                        console.log(data);
-{#                        fillContents(data.data);#}
-                    },
-                    error: function(jqXHR){
-                        console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
-                        return false;
-                    }
-                });
-            };
         </script>
     </head>
 
@@ -116,9 +132,9 @@
         <div class="container" >
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-{#                    <li class="active"><a href="#">Home</a></li>#}
-{#                    <li><a href="#">About</a></li>#}
-                    <li><a href="https://db.tt/4BCgSUaG">다운받기</a></li>
+                    <li class="active"><a href="#">문의사항</a></li>
+                    <li><a href="/notice">공지사항</a></li>
+                    <li><a href="/index">메인으로</a></li>
                 </ul>
                 <h3 class="text-muted">Wish B<small> :: 문의사항</small></h3>
             </div>
@@ -144,7 +160,7 @@
                     </div>
                     <div id="//inquiry._id.$oid//" class="panel-collapse collapse">
                       <div class="panel-body">
-                        // inquiry.report.STACK_TRACE //
+                        // inquiry.report //
                       </div>
                     </div>
                   </div>

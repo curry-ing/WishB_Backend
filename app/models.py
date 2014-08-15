@@ -49,6 +49,7 @@ class User(db.Model, UserMixin):
     active = db.Column(db.Boolean(), default=0)
     confirmed_at = db.Column(db.DateTime())
     key = db.Column(db.String(128))
+    is_admin = db.Column(db.SmallInteger, default=ROLE_ADMIN)
     title_life = db.Column(db.String(128))
     title_10 = db.Column(db.String(128))
     title_20 = db.Column(db.String(128))

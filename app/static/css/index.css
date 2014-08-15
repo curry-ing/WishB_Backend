@@ -1,28 +1,28 @@
 .bookshelfArea{
-    border-style: solid;
-    border-width: 1px;
-    border-color: #000000;
+    /*border-style: solid;*/
+    /*border-width: 1px;*/
+    /*border-color: #000000;*/
 }
 
 .bookshelfRow {
-    border-style: solid;
-    border-width:1px;
-    border-color: blue;
+    /*border-style: solid;*/
+    /*border-width:1px;*/
+    /*border-color: blue;*/
     overflow-x: auto;
 }
 
 .dreamBookArea {
     width: 0px;
-    border-style: solid;
-    border-width:1px;
-    border-color: blue;
+    /*border-style: solid;*/
+    /*border-width:1px;*/
+    /*border-color: blue;*/
     padding: 10px 0px;
     margin: 0px 10px;
     overflow-y: hidden;
 }
 
 .dreamBook {
-    background-color: yellow;
+    background-color: darkgray;
     background-size: cover;
     background-position: center center;
     width: 180px;

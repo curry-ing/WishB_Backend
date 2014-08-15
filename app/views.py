@@ -47,12 +47,12 @@ def get_locale():
 
 ##### VIEW ##################################################
 @app.route('/')
-@app.route('/indexx')
+@app.route('/index')
 def index():
     # return render_template('404.html'), 404
     # c.gauge('Access_Index', 1, delta = True)
-    # return render_template('index.html', title='index')
-    return redirect("http://www.wishb.net", 302)
+    return render_template('index.html', title='index')
+    # return redirect("http://www.wishb.net", 302)
 
 
 @app.route('/login_new')
@@ -62,6 +62,8 @@ def login():
 
 @app.route('/logout_new')
 def logout():
+    logout_user()
+    g.user = None
     return render_template('index.html', title='Index', action='logout')
 
 
@@ -87,6 +89,10 @@ def wish(id):
 @app.route('/inquiry')
 def inquiry():
     return render_template('inquiry.html')
+
+@app.route('/inquiry/write')
+def inquiry_write():
+    return render_template('inquiry_write.html')
 
 @app.route('/notice')
 def notice_list():
@@ -171,7 +177,7 @@ def get_auth_token():
             fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
-        if g.user.fb_id is not None or g.user.fb_id != 0:
+        if g.user.fb_id is not None and g.user.fb_id != 0:
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
 
@@ -192,6 +198,7 @@ def get_auth_token():
                                     'profile_img_url': profile_img,
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
                                     'fb_token':fb_token,
+                                    'is_admin':g.user.is_admin,
                                     'latest_app':{'version':latest_app['version'],
                                                   'url':latest_app['url']},
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
@@ -213,7 +220,7 @@ def get_resource():
             fb_token = social_user.access_token
     else:
         profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
-        if g.user.fb_id is not None or g.user.fb_id != 0:
+        if g.user.fb_id is not None and g.user.fb_id != 0:
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
@@ -233,6 +240,7 @@ def get_resource():
                             'profile_img_url': profile_img,
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
                             'fb_token':fb_token,
+                            'is_admin':g.user.is_admin,
                             'latest_app':{'version':latest_app['version'],
                                           'url':latest_app['url']},
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})

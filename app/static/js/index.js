@@ -1,10 +1,11 @@
 $(document).ready(function(){
     if(action=='logout'){
+        console.log("logout");
         LogoutUser();
     } else {
         if(CheckAuthentication()){
             $("#username").html(localStorage.getItem('username'));
-            GetDreamList();
+//            GetDreamList();
         } else {
             $("#username").html("GUEST");
         }
@@ -31,7 +32,6 @@ var GetDreamList = function() {
 }
 
 var MakeDreamShelf = function(dreamList){
-    console.log(dreamList);
     var width0=10, width1=10, width2=10, width3=10, width4=10, width5=10, width6=10;
     for (i=0; i<dreamList.length; i++){
         switch(dreamList[i].range){
@@ -116,38 +116,45 @@ var MakeDreamShelf = function(dreamList){
         }
     }
 }
-//var CheckAuthentication = function(){
-//    if (localStorage.getItem('token')){
-//        var auth_token = localStorage.getItem('token');
-//        var hash = $.base64.encode(auth_token + ':unused');
-//        $.ajax({
-//            url: '/api/resource',
-//            type: 'GET',
-//            beforeSend: function(xhr){
-//                xhr.setRequestHeader("Authorization", "Basic "+hash);
-//            },
-//            success: function(data){
-//                localStorage.removeItem('id','email','username');
-//                localStorage.setItem('id',data.data.id);
-//                localStorage.setItem('username',data.data.username);
-//                localStorage.setItem('email',data.data.email);
-//                return true;
-//            },
-//            error: function(jqXHR){
-//                console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
-//                return false;
-//            }
-//        });
-//        return true;
-//    } else {
-//        return false;
-//    }
-//}
+var CheckAuthentication = function(){
+    var auth;
+    if (localStorage.getItem('token')){
+        var auth_token = localStorage.getItem('token');
+        var hash = $.base64.encode(auth_token + ':unused');
+        $.ajax({
+            url: '/api/resource',
+            type: 'GET',
+            async: false,
+            beforeSend: function(xhr){
+                xhr.setRequestHeader("Authorization", "Basic "+hash);
+            },
+            success: function(data){
+                localStorage.removeItem('id','email','username');
+                localStorage.setItem('id',data.data.id);
+                localStorage.setItem('username',data.data.username);
+                localStorage.setItem('email',data.data.email);
+                if(data.data.is_admin == 0){
+                    $("#menuInquiryLink").attr('href','/inquiry/write');
+                } else {
+                    $("#menuInquiryLink").attr('href','/inquiry');
+                }
+                auth = true;
+            },
+            error: function(jqXHR){
+                console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                auth = false;
+            }
+        });
+    } else {
+        auth = false;
+    }
+    return auth;
+};
 
-//var LogoutUser = function(){
-//    if(CheckAuthentication()){
-//        localStorage.clear();
-//        alert("Bye!");
-//    }
-//    window.location = '/index';
-//}
+var LogoutUser = function(){
+    if(CheckAuthentication()){
+        localStorage.clear();
+        alert("ByeBye!");
+    }
+    window.location = '/index';
+}

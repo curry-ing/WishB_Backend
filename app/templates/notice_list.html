@@ -36,9 +36,49 @@
         <![endif]-->
         <script>
             $(document).ready(function(){
-                $("#noticeWriteBtn").click(GotoNoticeWrite);
-{#                GetContents();#}
+                if(CheckAuthentication()){
+{#                    $("#noticeSubmitBtn").click(SubmitNotice);#}
+{#                    $("#noticeSubject").keyup(ValidationCheck);#}
+                } else {
+                    alert("Authentication Failed");
+                    window.history.back();
+                }
             });
+
+            var CheckAuthentication = function(){
+                var auth;
+                if (localStorage.getItem('token')){
+                    var auth_token = localStorage.getItem('token');
+                    var hash = $.base64.encode(auth_token + ':unused');
+                    $.ajax({
+                        url: '/api/resource',
+                        type: 'GET',
+                        async: false,
+                        beforeSend: function(xhr){
+                            xhr.setRequestHeader("Authorization", "Basic "+hash);
+                        },
+                        success: function(data){
+                            if(data.data.is_admin == 0){
+                                document.getElementById('noticeWriteBtn').style.visibility = 'hidden';
+                                $("#menuInquiryLink").attr('href','/inquiry/write');
+                                auth = true;
+                            } else {
+                                document.getElementById('noticeWriteBtn').style.visibility = 'visible';
+                                $("#menuInquiryLink").attr('href','/inquiry');
+                                $("#noticeWriteBtn").click(GotoNoticeWrite);
+                                auth = true;
+                            }
+                        },
+                        error: function(jqXHR){
+                            console.log("ajax error " + jqXHR.status + ": " + jqXHR.description);
+                            auth = false;
+                        }
+                    });
+                } else {
+                    auth = false;
+                }
+                return auth;
+            };
 
             var app = angular.module('App', ['infinite-scroll']);
 
@@ -71,8 +111,9 @@
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-{#                    <li class="active"><a href="#">Home</a></li>#}
-                    <li><a href="#">About</a></li>
+                    <li id="menuInquiryBtn"><a href="#" id="menuInquiryLink">문의하기</a></li>
+                    <li class="active"><a href="#">공지사항</a></li>
+                    <li><a href="/index">메인으로</a></li>
                 </ul>
                 <h3 class="text-muted">Wish B<small> :: 공지사항</small></h3>
             </div>
