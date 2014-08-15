@@ -444,12 +444,47 @@ class UserListAPI(Resource):
         # Database Insert/Commit
         try:
             db.session.add(u)
+            db.session.flush()
+            db.session.refresh(u)
+
+            # Insert Sample Data
+            bkt = Bucket(title='Sample Bucket',
+                         user_id=u.id,
+                         level='0',
+                         status='0',
+                         private=True,
+                         reg_dt=datetime.datetime.now(),
+                         lst_mod_dt=datetime.datetime.now(),
+                         deadline=datetime.datetime.strptime(params['deadline'],'%Y-%m-%d').date(),
+                         description='Sample 버킷을 입력해보세요',
+                         parent_id=None,
+                         scope='DECADE',
+                         range=None,
+                         rpt_type=None,
+                         rpt_cndt=None,
+                         cvr_img_id=None)
+            db.session.add(bkt)
+            db.session.flush()
+            db.session.refresh(bkt)
+
+            post = Post(body=None,
+                        date=datetime.datetime.now().strftime('%Y%m%d'),
+                        content_dt=datetime.datetime.now(),
+                        user_id=u.user_id,
+                        language=None,
+                        bucket_id=bkt.id,
+                        text='그날그날 꿈을 이루기 위해 했던 활동, 느낌 등을 적어보세요!',
+                        img_id=None,
+                        url1=None,
+                        url2=None,
+                        url3=None,
+                        reg_dt=datetime.datetime.now(),
+                        lst_mod_dt=datetime.datetime.now())
+            db.session.add(post)
             db.session.commit()
         except:
             return {'status':'error',
                     'description':'Something went wrong.'}, 500
-
-
 
         send_awaiting_confirm_mail(u)
         g.user = u
@@ -484,13 +519,13 @@ class BucketAPI(Resource):
 
     def get(self, id):
         if request.authorization is not None:
-	    try:
+            if request.authorization['password'] == 'unused':
                 g.user = User.verify_auth_token(request.authorization['username'])
-   		uid = g.user.id
- 	    except:
-	        uid = None
+            else:
+                g.user = User.query.filter_by(email=request.authorization['username']).first()
+            uid = g.user.id
         else:
-	    uid = None
+            uid = None
         b = Bucket.query.filter(Bucket.id==id, Bucket.status!='9').first()
         if b == None:
             return {'status':'error', 'description':'No data found'}, 204
@@ -966,7 +1001,7 @@ class UserBucketAPI(Resource):
             if 'photo' in request.files:
                 feed['picture']=url_for('send_pic', img_id=bkt.cvr_img_id, img_type='origin', _external=True)
 
- 	    db.session.flush()
+ 	        db.session.flush()
             facebook_feed(feed, id, 'bucket', bkt.id)
             logging_social(g.user.id, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
             # bkt.fb_feed_id = resp['id']
@@ -1203,16 +1238,14 @@ class BucketTimeline(Resource):
         super(BucketTimeline, self).__init__()
 
     def get(self, bucket_id):
-        if request.authorization is not None:
-            print request.authorization
-            print User.verify_auth_token(request.authorization['username'])
+        if request.authorization is None or request.authorization['username'] == 'null':
+            uid = None
+        else:
             if request.authorization['password'] == 'unused':
                 g.user = User.verify_auth_token(request.authorization['username'])
             else:
                 g.user = User.query.filter_by(email=request.authorization['username']).first()
             uid = g.user.id
-        else:
-            uid = None
         b = Bucket.query.filter_by(id=bucket_id).first()
         if b is None:
             return {'status':'error',
