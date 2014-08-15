@@ -518,14 +518,14 @@ class BucketAPI(Resource):
         super(BucketAPI, self).__init__()
 
     def get(self, id):
-        if request.authorization is not None:
+        if request.authorization is None or request.authorization['username'] == 'null':
+            uid = None
+        else:
             if request.authorization['password'] == 'unused':
                 g.user = User.verify_auth_token(request.authorization['username'])
             else:
                 g.user = User.query.filter_by(email=request.authorization['username']).first()
             uid = g.user.id
-        else:
-            uid = None
         b = Bucket.query.filter(Bucket.id==id, Bucket.status!='9').first()
         if b == None:
             return {'status':'error', 'description':'No data found'}, 204
