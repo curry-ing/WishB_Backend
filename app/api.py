@@ -1245,7 +1245,7 @@ class BucketTimeline(Resource):
                 g.user = User.verify_auth_token(request.authorization['username'])
             else:
                 g.user = User.query.filter_by(email=request.authorization['username']).first()
-            uid = g.user.id
+            uid = None
         b = Bucket.query.filter_by(id=bucket_id).first()
         if b is None:
             return {'status':'error',
@@ -1833,10 +1833,14 @@ class NoticeList(Resource):
         data = []
         if 'page' in request.args:
             for result in mdb.notice.find().sort("_id", -1).skip(POSTS_PER_PAGE*2*int(request.args['page'])).limit(POSTS_PER_PAGE*2):
+                result['key'] = str(result['_id'])
                 data.append(json.loads(json_util.dumps(result)))
         else:
             for result in mdb.notice.find().sort("_id", -1):
+                result['key'] = str(result['_id'])
                 data.append(json.loads(json_util.dumps(result)))
+
+
 
         return {'status':'success', 'data':data}, 200
 
