@@ -444,43 +444,43 @@ class UserListAPI(Resource):
         # Database Insert/Commit
         try:
             db.session.add(u)
-            db.session.flush()
-            db.session.refresh(u)
+            # db.session.flush()
+            # db.session.refresh(u)
 
             # Insert Sample Data
-            bkt = Bucket(title='Sample Bucket',
-                         user_id=u.id,
-                         level='0',
-                         status='0',
-                         private=True,
-                         reg_dt=datetime.datetime.now(),
-                         lst_mod_dt=datetime.datetime.now(),
-                         deadline=datetime.datetime.strptime(params['deadline'],'%Y-%m-%d').date(),
-                         description='Make your own bucket',
-                         parent_id=None,
-                         scope='DECADE',
-                         range=None,
-                         rpt_type=None,
-                         rpt_cndt=None,
-                         cvr_img_id=None)
-            db.session.add(bkt)
-            db.session.flush()
-            db.session.refresh(bkt)
+            # bkt = Bucket(title='Sample Bucket',
+            #              user_id=u.id,
+            #              level='0',
+            #              status='0',
+            #              private=True,
+            #              reg_dt=datetime.datetime.now(),
+            #              lst_mod_dt=datetime.datetime.now(),
+            #              deadline=datetime.datetime.strptime(params['deadline'],'%Y-%m-%d').date(),
+            #              description='Make your own bucket',
+            #              parent_id=None,
+            #              scope='DECADE',
+            #              range=None,
+            #              rpt_type=None,
+            #              rpt_cndt=None,
+            #              cvr_img_id=None)
+            # db.session.add(bkt)
+            # db.session.flush()
+            # db.session.refresh(bkt)
 
-            post = Post(body=None,
-                        date=datetime.datetime.now().strftime('%Y%m%d'),
-                        content_dt=datetime.datetime.now(),
-                        user_id=u.user_id,
-                        language=None,
-                        bucket_id=bkt.id,
-                        text='You can write something or upload a picture and so on',
-                        img_id=None,
-                        url1=None,
-                        url2=None,
-                        url3=None,
-                        reg_dt=datetime.datetime.now(),
-                        lst_mod_dt=datetime.datetime.now())
-            db.session.add(post)
+            # post = Post(body=None,
+            #             date=datetime.datetime.now().strftime('%Y%m%d'),
+            #             content_dt=datetime.datetime.now(),
+            #             user_id=u.user_id,
+            #             language=None,
+            #             bucket_id=bkt.id,
+            #             text='You can write something or upload a picture and so on',
+            #             img_id=None,
+            #             url1=None,
+            #             url2=None,
+            #             url3=None,
+            #             reg_dt=datetime.datetime.now(),
+            #             lst_mod_dt=datetime.datetime.now())
+            # db.session.add(post)
             db.session.commit()
         except:
             return {'status':'error',

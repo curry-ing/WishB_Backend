@@ -181,7 +181,9 @@ def get_auth_token():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
 
-    latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
+    mdb = MongoClient(MONGODB_URI).wishb
+    latest_app = mdb.release.find_one(sort=[("version", -1)])
+    latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     token = g.user.generate_auth_token()
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
@@ -201,6 +203,7 @@ def get_auth_token():
                                     'is_admin':g.user.is_admin,
                                     'latest_app':{'version':latest_app['version'],
                                                   'url':latest_app['url']},
+                                    'latest_notice':str(latest_notice['_id']),
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
                             'token': token.decode('ascii')}})
 
@@ -224,7 +227,10 @@ def get_resource():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
-    latest_app = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
+    mdb = MongoClient(MONGODB_URI).wishb
+    latest_app = mdb.release.find_one(sort=[("version", -1)])
+    latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
+
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
                             'username': g.user.username,
@@ -243,6 +249,7 @@ def get_resource():
                             'is_admin':g.user.is_admin,
                             'latest_app':{'version':latest_app['version'],
                                           'url':latest_app['url']},
+                            'latest_notice':str(latest_notice['_id']),
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
