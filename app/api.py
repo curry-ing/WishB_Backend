@@ -2003,13 +2003,11 @@ class Newsfeed(Resource):
             data_tobe = []
             for result in mdb.newsfeed.find().sort("_id",-1).skip(POSTS_PER_PAGE * page).limit(POSTS_PER_PAGE):
                 if result['object'] == 'bucket':
-                    type = 'Bucket'
                     id = result['bucket']['id']
                     text = result['bucket']['description']
                     img_id = result['bucket']['img_id']
                     fb_feed_id = result['bucket']['fb_feed_id']
                 elif result['object'] == 'journal':
-                    type = 'Timeline'
                     id = result['journal']['id']
                     text = result['journal']['text']
                     img_id = result['journal']['img_id']
@@ -2026,7 +2024,7 @@ class Newsfeed(Resource):
                 else:
                     profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
 
-                data_asis.append({'type':type,
+                data_asis.append({'type':result['object'],
                              '_id':str(result['_id']),
                              'id':id,
                              'title':result['bucket']['title'],
