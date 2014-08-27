@@ -62,3 +62,10 @@ def logging_downlaod(ip_addr):
            "log_dt": datetime.now()}
 
     download_log.insert(log)
+
+
+@async
+def logging_newsfeed(obj):
+    mdb.newsfeed.insert(obj)
+
+
