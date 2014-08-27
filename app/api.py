@@ -1935,6 +1935,7 @@ class Newsfeed(Resource):
                               Bucket.fb_feed_id.label('fb_feed_id'),
                               User.username.label('username'),
                               User.profile_img_id.label('user_img'),
+                              User.fb_id.label('fb_id'),
                               User.id.label('user_id'))\
                         .filter(Bucket.user_id == User.id)
                         # .filter(Bucket.lst_mod_dt < oldest if type == 'older' else Bucket.lst_mod_dt > oldest).limit(10)
@@ -1950,6 +1951,7 @@ class Newsfeed(Resource):
                               Post.fb_feed_id.label('fb_feed_id'),
                               User.username.label('username'),
                               User.profile_img_id.label('user_img'),
+                              User.fb_id.label('fb_id'),
                               User.id.label('user_id'))\
                         .filter(Bucket.id == Post.bucket_id)\
                         .filter(Bucket.user_id == User.id)
@@ -1957,8 +1959,19 @@ class Newsfeed(Resource):
         q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page-1):POSTS_PER_PAGE * page]
         # q = q1.union(q2).order_by('lst_mod_dt desc').limit(10)
 
+
         data = []
         for i in q:
+            if i.profile_img_id == 0:
+                if i.fb_id == 0:
+                    profile_img = None
+                else:
+                    social_user = UserSocial.query.filter_by(user_id=i.user_id).first()
+                    graph = facebook.GraphAPI(social_user.access_token)
+                    args = {'type':'normal'}
+                    profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+            else:
+                profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
             data.append({
                 "type": i.type,
                 "id": i.id,
@@ -1969,7 +1982,7 @@ class Newsfeed(Resource):
                              "img": None if i.img_id is None else url_for('send_pic', img_id=i.img_id, img_type='thumb_md', _external=True)},
                 "user_id": i.user_id,
                 "username": i.username.encode('utf-8'),
-                "user_profile_img": None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True),
+                "user_profile_img": profile_img,
                 "action": "Modified" if i.reg_dt < i.lst_mod_dt else "Registered",
                 "fb_feed_id": None if i.fb_feed_id is None else i.fb_feed_id
             })
