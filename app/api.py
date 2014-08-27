@@ -794,7 +794,7 @@ class BucketAPI(Resource):
             'user':{'id':u.id,
                     'username':u.username,
                     'fb_id':u.fb_id,
-                    'profile_img':u.profile_img_id},
+                    'profile_img_id':u.profile_img_id},
         }
         logging_newsfeed(nf_data)
 
@@ -1080,7 +1080,7 @@ class UserBucketAPI(Resource):
             'user':{'id':u.id,
                     'username':u.username,
                     'fb_id':u.fb_id,
-                    'profile_img':u.profile_img_id},
+                    'profile_img_id':u.profile_img_id},
         }
         logging_newsfeed(nf_data)
 
@@ -1543,7 +1543,7 @@ class BucketTimeline(Resource):
             'user':{'id':g.user.id,
                     'username':g.user.username,
                     'fb_id':g.user.fb_id,
-                    'profile_img':g.user.profile_img_id},
+                    'profile_img_id':g.user.profile_img_id},
         }
         logging_newsfeed(nf_data)
 
@@ -1748,7 +1748,7 @@ class TimelineContent(Resource):
             'user':{'id':g.user.id,
                     'username':g.user.username,
                     'fb_id':g.user_fb_id,
-                    'profile_img':g.user.profile_img_id}
+                    'profile_img_id':g.user.profile_img_id}
         }
         logging_newsfeed(nf_data)
 
