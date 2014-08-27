@@ -1749,7 +1749,7 @@ class TimelineContent(Resource):
                        'img_id':post.img_id},
             'user':{'id':g.user.id,
                     'username':g.user.username,
-                    'fb_id':g.user_fb_id,
+                    'fb_id':g.user.fb_id,
                     'profile_img_id':g.user.profile_img_id}
         }
         logging_newsfeed(nf_data)
