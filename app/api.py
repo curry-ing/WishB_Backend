@@ -1506,11 +1506,11 @@ class TimelineContent(Resource):
                     'description': 'There\'s no content with id: ' + str(id)}, 204
 
         u = User.query.filter_by(id=post.user_id).first()
-        if not g.user.is_following(u):
-            if g.user == u:
-                pass
-            else:
-                return {'status': 'error', 'description': 'User unauthorized'}, 401
+        # if not g.user.is_following(u):
+        #     if g.user == u:
+        #         pass
+        #     else:
+        #         return {'status': 'error', 'description': 'User unauthorized'}, 401
 
         data = {'id': post.id,
                 'user_id': post.user_id,
@@ -1914,51 +1914,79 @@ class Newsfeed(Resource):
         super(Newsfeed, self).__init__()
 
     def get(self):
-        if 'page' not in request.args:
-            return {'status': 'error', 'description': 'Newsfeed API requires [PAGE] number'}, 400
-        else:
+        if 'page' in request.args:
             page = int(request.args['page'])
-
-        # oldest = datetime.datetime.strptime('20140721','%Y%m%d')
-        # print oldest
-        # type = 'newer'
-
-        q1 = db.session.query(literal_column('"Bucket"').label('type'),
-                              Bucket.id.label('id'),
-                              Bucket.title.label('title'),
-                              Bucket.deadline.label('deadline'),
-                              Bucket.lst_mod_dt.label('lst_mod_dt'),
-                              Bucket.description.label('text'),
-                              Bucket.cvr_img_id.label('img_id'),
-                              # Bucket.user_id.label('user_id'),
-                              Bucket.reg_dt.label('reg_dt'),
-                              Bucket.fb_feed_id.label('fb_feed_id'),
-                              User.username.label('username'),
-                              User.profile_img_id.label('user_img'),
-                              User.fb_id.label('fb_id'),
-                              User.id.label('user_id'))\
-                        .filter(Bucket.user_id == User.id)
-                        # .filter(Bucket.lst_mod_dt < oldest if type == 'older' else Bucket.lst_mod_dt > oldest).limit(10)
-        q2 = db.session.query(literal_column('"Timeline"').label('type'),
-                              Post.id.label('id'),
-                              Bucket.title.label('title'),
-                              Bucket.deadline.label('deadline'),
-                              Post.lst_mod_dt.label('lst_mod_dt'),
-                              Post.text.label('text'),
-                              Post.img_id.label('img_id'),
-                              # Post.user_id.label('user_id'),
-                              Post.reg_dt.label('reg_dt'),
-                              Post.fb_feed_id.label('fb_feed_id'),
-                              User.username.label('username'),
-                              User.profile_img_id.label('user_img'),
-                              User.fb_id.label('fb_id'),
-                              User.id.label('user_id'))\
-                        .filter(Bucket.id == Post.bucket_id)\
-                        .filter(Bucket.user_id == User.id)
-                        # .filter(Post.lst_mod_dt < oldest if type == 'older' else Post.lst_mod_dt > oldest).limit(10)
-        q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page-1):POSTS_PER_PAGE * page]
-        # q = q1.union(q2).order_by('lst_mod_dt desc').limit(10)
-
+            q1 = db.session.query(literal_column('"Bucket"').label('type'),
+                                  Bucket.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
+                                  Bucket.description.label('text'),
+                                  Bucket.cvr_img_id.label('img_id'),
+                                  Bucket.reg_dt.label('reg_dt'),
+                                  Bucket.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.user_id == User.id)
+            # .filter(Bucket.lst_mod_dt < oldest if type == 'older' else Bucket.lst_mod_dt > oldest).limit(10)
+            q2 = db.session.query(literal_column('"Timeline"').label('type'),
+                                  Post.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Post.lst_mod_dt.label('lst_mod_dt'),
+                                  Post.text.label('text'),
+                                  Post.img_id.label('img_id'),
+                                  Post.reg_dt.label('reg_dt'),
+                                  Post.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.id == Post.bucket_id) \
+                .filter(Bucket.user_id == User.id)
+            q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page-1):POSTS_PER_PAGE * page]
+        elif 'type' in request.args:
+            if request.args['type'] not in ['older', 'newer']:
+                return {'status':'error', 'description':'Value of [TYPE] must be in [older, newer]'}, 403
+            type = request.args['type']
+            baseline = datetime.datetime.strptime(request.args['baseline'], '%Y%m%d_%H%M%S')
+            q1 = db.session.query(literal_column('"Bucket"').label('type'),
+                                  Bucket.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
+                                  Bucket.description.label('text'),
+                                  Bucket.cvr_img_id.label('img_id'),
+                                  Bucket.reg_dt.label('reg_dt'),
+                                  Bucket.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.user_id == User.id)\
+                .filter(Bucket.lst_mod_dt < baseline if type == 'older' else Bucket.lst_mod_dt > baseline).limit(10)
+            q2 = db.session.query(literal_column('"Timeline"').label('type'),
+                                  Post.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Post.lst_mod_dt.label('lst_mod_dt'),
+                                  Post.text.label('text'),
+                                  Post.img_id.label('img_id'),
+                                  Post.reg_dt.label('reg_dt'),
+                                  Post.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.id == Post.bucket_id) \
+                .filter(Bucket.user_id == User.id)\
+                .filter(Post.lst_mod_dt < baseline if type == 'older' else Post.lst_mod_dt > baseline).limit(10)
+            q = q1.union(q2).order_by('lst_mod_dt desc').limit(10)
+        else:
+            return {'status': 'error',
+                    'description': 'Newsfeed API requires [PAGE] or [TYPE, BASELINE] arguments'}, 400
 
         data = []
         for i in q:
