@@ -1969,7 +1969,7 @@ class Newsfeed(Resource):
                     social_user = UserSocial.query.filter_by(user_id=i.user_id).first()
                     graph = facebook.GraphAPI(social_user.access_token)
                     args = {'type':'normal'}
-                    profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+                    profile_img = graph.get_object(i.fb_id+'/picture', **args)['url']
             else:
                 profile_img = None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True)
             data.append({
