@@ -678,9 +678,9 @@ class BucketAPI(Resource):
                             db.session.delete(p)
                         except:
                             pass
-
+            if value is not None:
+                nf_action_list.append(key)
             setattr(b, key, value)
-            nf_action_list.append(key)
 
         if 'photo' in request.files:
             upload_type = 'photo'
@@ -1609,6 +1609,7 @@ class TimelineContent(Resource):
             return {'status': 'error',
                     'description': 'Unauthorized'}, 401
 
+        b = Bucket.query.filter_by(id=post.bucket_id).first()
         nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
@@ -1633,8 +1634,10 @@ class TimelineContent(Resource):
                 content_dt_val = params['content_dt'].split()[0].split('-')
                 setattr(post, 'date', content_dt_val[0] + content_dt_val[1] + content_dt_val[2])
 
+            if value is not None:
+                nf_action_list.append(key)
             setattr(post, key, value)
-            nf_action_list.append(key)
+
 
         if 'photo' in request.files:
             upload_type = 'photo'
@@ -1684,7 +1687,6 @@ class TimelineContent(Resource):
             graph = facebook.GraphAPI(social_user.access_token)
 
             if params['fb_share'] in [True, 'true'] and post.fb_feed_id is None:
-                b = Bucket.query.filter_by(id=post.bucket_id).first()
                 feed = {}
                 feed['message'] = g.user.username.encode('utf-8') + " get closer to dream '" + b.title.encode(
                     'utf-8') + "' on Wish B"
