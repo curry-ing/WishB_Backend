@@ -22,7 +22,7 @@ from app import db, api, app
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
 from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE, WISHB_SERVER_URI, MONGODB_URI
-from logging import logging_auth, logging_api, logging_social
+from logging import logging_auth, logging_api, logging_social, logging_newsfeed
 from social import facebook_feed
 from pymongo import MongoClient
 
@@ -818,11 +818,11 @@ class UserBucketAPI(Resource):
 
     def get(self, id):
         u = User.query.filter_by(id=id).first()
-        if not g.user.is_following(u):
-            if g.user == u:
-                pass
-            else:
-                return {'status': 'error', 'description': 'User unauthorized'}, 401
+        # if not g.user.is_following(u):
+        #     if g.user == u:
+        #         pass
+        #     else:
+        #         return {'status': 'error', 'description': 'User unauthorized'}, 401
 
         data = []
         if g.user == u:
@@ -1044,6 +1044,21 @@ class UserBucketAPI(Resource):
                                                                        img_type='thumb_md', _external=True),
             'fb_feed_id': None if bkt.fb_feed_id is None else bkt.fb_feed_id
         }
+        nf_data = {
+            'type':'Bucket',
+            'action':'registered',
+            'timestamp':datetime.datetime.now(),
+            'bucket':{'id':bkt.id,
+                      'title':bkt.title,
+                      'deadline':bkt.deadline,
+                      'fb_feed_id':None if bkt.fb_feed_id is None else bkt.fb_feed_id,
+                      'description':None if bkt.description is None else bkt.description,
+                      'img_id':None if bkt.cvr_img_id is None else bkt.cvr_img_id},
+            'user':{'id':u.id,
+                    'username':u.username,
+                    'profile_img':u.profile_img_id},
+        }
+        logging_newsfeed(nf_data)
 
         try:
             stsd.gauge('BucketAdd_API_Call', 1, delta=True)
