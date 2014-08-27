@@ -241,8 +241,7 @@ class UserAPI(Resource):
             return {'status': 'error', 'description': 'Unauthorized'}, 401
 
         for key in params:
-            value = None if params[key] == "" else params[
-                key]  # Or Use (params[key],None)[params[key]==""] Sam Hang Yeonsanja
+            value = None if params[key] == "" else params[key]  # Or Use (params[key],None)[params[key]==""] Sam Hang Yeonsanja
 
             # Nobody can change id, email, fb_id, last_seen
             if key in ['id', 'email', 'fb_id', 'last_seen']:
@@ -1920,6 +1919,10 @@ class Newsfeed(Resource):
         else:
             page = int(request.args['page'])
 
+        # oldest = datetime.datetime.strptime('20140721','%Y%m%d')
+        # print oldest
+        # type = 'newer'
+
         q1 = db.session.query(literal_column('"Bucket"').label('type'),
                               Bucket.id.label('id'),
                               Bucket.title.label('title'),
@@ -1927,11 +1930,14 @@ class Newsfeed(Resource):
                               Bucket.lst_mod_dt.label('lst_mod_dt'),
                               Bucket.description.label('text'),
                               Bucket.cvr_img_id.label('img_id'),
-                              Bucket.user_id.label('user_id'),
+                              # Bucket.user_id.label('user_id'),
                               Bucket.reg_dt.label('reg_dt'),
                               Bucket.fb_feed_id.label('fb_feed_id'),
-                              User.username.label('username')
-        ).filter(Bucket.user_id == User.id)
+                              User.username.label('username'),
+                              User.profile_img_id.label('user_img'),
+                              User.id.label('user_id'))\
+                        .filter(Bucket.user_id == User.id)
+                        # .filter(Bucket.lst_mod_dt < oldest if type == 'older' else Bucket.lst_mod_dt > oldest).limit(10)
         q2 = db.session.query(literal_column('"Timeline"').label('type'),
                               Post.id.label('id'),
                               Bucket.title.label('title'),
@@ -1939,12 +1945,17 @@ class Newsfeed(Resource):
                               Post.lst_mod_dt.label('lst_mod_dt'),
                               Post.text.label('text'),
                               Post.img_id.label('img_id'),
-                              Post.user_id.label('user_id'),
+                              # Post.user_id.label('user_id'),
                               Post.reg_dt.label('reg_dt'),
                               Post.fb_feed_id.label('fb_feed_id'),
-                              User.username.label('username')
-        ).filter(Bucket.id == Post.bucket_id).filter(Bucket.user_id == User.id)
-        q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page - 1):POSTS_PER_PAGE * page]
+                              User.username.label('username'),
+                              User.profile_img_id.label('user_img'),
+                              User.id.label('user_id'))\
+                        .filter(Bucket.id == Post.bucket_id)\
+                        .filter(Bucket.user_id == User.id)
+                        # .filter(Post.lst_mod_dt < oldest if type == 'older' else Post.lst_mod_dt > oldest).limit(10)
+        q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page-1):POSTS_PER_PAGE * page]
+        # q = q1.union(q2).order_by('lst_mod_dt desc').limit(10)
 
         data = []
         for i in q:
@@ -1956,7 +1967,9 @@ class Newsfeed(Resource):
                 "lst_mod_dt": i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 "contents": {"text": None if i.text is None else i.text.encode('utf-8'),
                              "img": None if i.img_id is None else url_for('send_pic', img_id=i.img_id, img_type='thumb_md', _external=True)},
+                "user_id": i.user_id,
                 "username": i.username.encode('utf-8'),
+                "user_profile_img": None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True),
                 "action": "Modified" if i.reg_dt < i.lst_mod_dt else "Registered",
                 "fb_feed_id": None if i.fb_feed_id is None else i.fb_feed_id
             })
