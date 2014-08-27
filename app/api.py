@@ -1962,7 +1962,7 @@ class Newsfeed(Resource):
 
         data = []
         for i in q:
-            if i.profile_img_id == 0:
+            if i.user_img == 0:
                 if i.fb_id == 0:
                     profile_img = None
                 else:
@@ -1971,7 +1971,7 @@ class Newsfeed(Resource):
                     args = {'type':'normal'}
                     profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
             else:
-                profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+                profile_img = None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True)
             data.append({
                 "type": i.type,
                 "id": i.id,
