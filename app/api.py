@@ -833,7 +833,7 @@ class UserBucketAPI(Resource):
             b = Bucket.query.filter(Bucket.user_id == u.id,
                                     Bucket.status != '9',
                                     Bucket.level == '0',
-                                    Bucket.private == '0').all()
+                                    Bucket.private == '1').all()
 
         if len(b) == 0:
             return {'status': 'error', 'description': 'No data Found'}, 204
