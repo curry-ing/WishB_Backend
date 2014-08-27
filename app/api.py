@@ -793,6 +793,7 @@ class BucketAPI(Resource):
                       'img_id':None if b.cvr_img_id is None else b.cvr_img_id},
             'user':{'id':u.id,
                     'username':u.username,
+                    'fb_id':u.fb_id,
                     'profile_img':u.profile_img_id},
         }
         logging_newsfeed(nf_data)
@@ -1078,6 +1079,7 @@ class UserBucketAPI(Resource):
                       'img_id':None if bkt.cvr_img_id is None else bkt.cvr_img_id},
             'user':{'id':u.id,
                     'username':u.username,
+                    'fb_id':u.fb_id,
                     'profile_img':u.profile_img_id},
         }
         logging_newsfeed(nf_data)
@@ -1535,10 +1537,12 @@ class BucketTimeline(Resource):
                       'description':b.description,
                       'img_id':b.cvr_img_id},
             'journal':{'id':post.id,
-                        'text':None if post.text is None else post.text,
-                        'img_id':post.img_id},
+                       'text':None if post.text is None else post.text,
+                       'fb_feed_id':post.fb_feed_id,
+                       'img_id':post.img_id},
             'user':{'id':g.user.id,
                     'username':g.user.username,
+                    'fb_id':g.user.fb_id,
                     'profile_img':g.user.profile_img_id},
         }
         logging_newsfeed(nf_data)
@@ -1738,10 +1742,12 @@ class TimelineContent(Resource):
                       'description':b.description,
                       'img_id':b.cvr_img_id},
             'journal':{'id':post.id,
-                        'text':None if post.text is None else post.text,
-                        'img_id':post.img_id},
+                       'text':None if post.text is None else post.text,
+                       'fb_feed_id':post.fb_feed_id,
+                       'img_id':post.img_id},
             'user':{'id':g.user.id,
                     'username':g.user.username,
+                    'fb_id':g.user_fb_id,
                     'profile_img':g.user.profile_img_id}
         }
         logging_newsfeed(nf_data)
