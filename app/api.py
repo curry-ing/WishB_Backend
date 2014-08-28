@@ -593,6 +593,9 @@ class BucketAPI(Resource):
         nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
+            
+            if value != getattr(b, key):
+                nf_action_list.append(key)
 
             # Editable Fields
             if key not in ['title', 'status', 'private', 'deadline', 'description', 'parent_id', 'scope', 'range',
@@ -678,10 +681,6 @@ class BucketAPI(Resource):
                             db.session.delete(p)
                         except:
                             pass
-            if value is not None:
-                print key
-                print value
-                nf_action_list.append(key)
             setattr(b, key, value)
 
         if 'photo' in request.files:
@@ -1615,6 +1614,8 @@ class TimelineContent(Resource):
         nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
+            if value != getattr(post, key):
+                nf_action_list.append(key)
 
             # Editable Fields
             if key not in ['text', 'url1', 'url2', 'url3', 'img_id', 'fb_share', 'content_dt']:
@@ -1636,8 +1637,6 @@ class TimelineContent(Resource):
                 content_dt_val = params['content_dt'].split()[0].split('-')
                 setattr(post, 'date', content_dt_val[0] + content_dt_val[1] + content_dt_val[2])
 
-            if value is not None:
-                nf_action_list.append(key)
             setattr(post, key, value)
 
 
