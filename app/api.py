@@ -594,11 +594,8 @@ class BucketAPI(Resource):
         for key in params:
             value = None if params[key] == "" else params[key]
 
-            if key not in ['deadline','fb_share'] and value != getattr(b, key):
+            if key in ['status'] and value != getattr(b, key) and value == '1':
                 nf_action_list.append(key)
-            if key == 'deadline' and value != getattr(b, key).strftime('%Y-%m-%d %H:%M:%S'):
-                nf_action_list.append(key)
-
 
             # Editable Fields
             if key not in ['title', 'status', 'private', 'deadline', 'description', 'parent_id', 'scope', 'range',
@@ -727,7 +724,7 @@ class BucketAPI(Resource):
             db.session.refresh(f)
 
             setattr(b, 'cvr_img_id', f.id)
-            nf_action_list.append('photo')
+            # nf_action_list.append('photo')
 
         if 'fb_share' in params:
             try:
@@ -746,7 +743,7 @@ class BucketAPI(Resource):
 
                     facebook_feed(feed, g.user.id, 'bucket', b.id)
                     logging_social(g.user.id, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
-                    nf_action_list.append('fb_share')
+                    # nf_action_list.append('fb_share')
                 elif params['fb_share'] in [False, 'false']:
                     if b.fb_feed_id is not None:
                         social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
@@ -889,7 +886,6 @@ class UserBucketAPI(Resource):
                 'rpt_type': i.rpt_type,
                 'rpt_cndt': i.rpt_cndt,
                 'lst_mod_dt': None if i.lst_mod_dt is None else i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                # 'cvr_img_url_old': None if i.cvr_img_id is None else photos.url(File.query.filter_by(id=i.cvr_img_id).first().name),
                 'cvr_img_url': None if i.cvr_img_id is None else url_for('send_pic', img_id=i.cvr_img_id,
                                                                          img_type='thumb_md', _external=True),
                 'fb_feed_id': None if i.fb_feed_id is None else i.fb_feed_id,
@@ -1614,13 +1610,13 @@ class TimelineContent(Resource):
                     'description': 'Unauthorized'}, 401
 
         b = Bucket.query.filter_by(id=post.bucket_id).first()
-        nf_action_list = []
+        # nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
-            if key not in ['fb_share', 'img_id', 'content_dt'] and value != getattr(post, key):
-                nf_action_list.append(key)
-            if key == 'content_dt' and value != getattr(post, key).strftime('%Y-%m-%d %H:%M:%S'):
-                nf_action_list.append(key)
+            # if key not in ['fb_share', 'img_id', 'content_dt'] and value != getattr(post, key):
+            #     nf_action_list.append(key)
+            # if key == 'content_dt' and value != getattr(post, key).strftime('%Y-%m-%d %H:%M:%S'):
+            #     nf_action_list.append(key)
 
             # Editable Fields
             if key not in ['text', 'url1', 'url2', 'url3', 'img_id', 'fb_share', 'content_dt']:
@@ -1686,7 +1682,7 @@ class TimelineContent(Resource):
             db.session.refresh(f)
 
             setattr(post, 'img_id', f.id)
-            nf_action_list.append('photo')
+            # nf_action_list.append('photo')
 
         if 'fb_share' in params:
             social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
@@ -1706,7 +1702,7 @@ class TimelineContent(Resource):
 
                 facebook_feed(feed, g.user.id, 'timeline', post.id)
                 logging_social(g.user.id, 'Facebook', 'share', 'timeline', inspect.stack()[0][3])
-                nf_action_list.append('fb_share')
+                # nf_action_list.append('fb_share')
 
             elif params['fb_share'] in [False, 'false']:
                 if post.fb_feed_id is not None:
@@ -1739,8 +1735,8 @@ class TimelineContent(Resource):
 
         nf_data = {
             'object':'journal',
-            'action':{'type':'modified',
-                      'items':nf_action_list},
+            'action':{'type':'modified'},
+                      # 'items':nf_action_list},
             'timestamp':datetime.datetime.now(),
             'bucket':{'id':b.id,
                       'title':b.title,
