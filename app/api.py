@@ -8,6 +8,7 @@ import statsd
 import inspect
 import json
 from bson import json_util
+from bson.objectid import ObjectId
 
 from flask import request, g, url_for
 from flask.ext.httpauth import HTTPBasicAuth
@@ -18,13 +19,12 @@ from hashlib import md5
 from rauth.service import OAuth2Service
 from sqlalchemy.sql import func, select, literal_column
 # Source
-from app import db, api, app
+from app import db, api, app, mdb
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
 from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE, WISHB_SERVER_URI, MONGODB_URI
 from logging import logging_auth, logging_api, logging_social, logging_newsfeed
 from social import facebook_feed
-from pymongo import MongoClient
 
 from PIL import Image
 
@@ -33,8 +33,6 @@ configure_uploads(app, photos)
 patch_request_class(app, size=MAX_UPLOAD_SIZE)  # File Upload Size = Up to 2MB
 
 stsd = statsd.StatsClient('localhost', 8125)
-
-mdb = MongoClient(MONGODB_URI).wishb
 
 # #### AUTHENTICATION #######################################
 
@@ -592,12 +590,12 @@ class BucketAPI(Resource):
 
         newsfeed_logging = False
         nf_action_list = []
-        
+
         for key in params:
             value = None if params[key] == "" else params[key]
 
-            if key in ['status'] and value != getattr(b, key) and value == '1':
-                nf_action_list.append(key)
+            if key in ['status'] and getattr(b, key) == '0' and value == '1':
+                nf_action_list.append({key:'completed'})
                 newsfeed_logging = True
 
             # Editable Fields
@@ -1842,7 +1840,6 @@ class Report(Resource):
         super(Report, self).__init__()
 
     def get(self):
-        mdb = MongoClient(MONGODB_URI).wishb
         data = []
 
         if not 'type' in request.args or request.args['type'] == None:
@@ -1892,7 +1889,6 @@ class Report(Resource):
         data['reg_dt'] = datetime.datetime.now()
 
         try:
-            mdb = MongoClient(MONGODB_URI).wishb
             mdb.report.insert(data)
         except:
             return {'status': 'error', 'description': 'something went wrong'}, 500
@@ -1908,7 +1904,6 @@ class Release(Resource):
         super(Release, self).__init__()
 
     def get(self):
-        mdb = MongoClient(MONGODB_URI).wishb
 
         if not 'os' in request.args or request.args['os'] == None:
             return {'status': 'error', 'description': '[OS] type is required'}, 400
@@ -1941,7 +1936,6 @@ class Release(Resource):
         data['url'] = request.args['url']
 
         try:
-            mdb = MongoClient(MONGODB_URI).wishb
             mdb.release.insert(data)
         except:
             return {'status': 'error', 'description': 'something went wrong'}, 500
@@ -1957,8 +1951,6 @@ class NoticeList(Resource):
         super(NoticeList, self).__init__()
 
     def get(self):
-        mdb = MongoClient(MONGODB_URI).wishb
-
         data = []
         if 'page' in request.args:
             for result in mdb.notice.find().sort("_id", -1).skip(POSTS_PER_PAGE * 2 * int(request.args['page'])).limit(
@@ -1993,7 +1985,6 @@ class NoticeList(Resource):
         data['reg_dt'] = datetime.datetime.now()
 
         try:
-            mdb = MongoClient(MONGODB_URI).wishb
             mdb.notice.insert(data)
         except:
             return {'status': 'error', 'description': 'something went wrong'}, 500
@@ -2009,267 +2000,64 @@ class Newsfeed(Resource):
         super(Newsfeed, self).__init__()
 
     def get(self):
+        data_asis = []
+        data_tobe = []
         if 'page' in request.args:
             page = int(request.args['page']) - 1
-            mdb = MongoClient(MONGODB_URI).wishb
-            data_asis = []
-            data_tobe = []
-            for result in mdb.newsfeed.find().sort("_id",-1).skip(POSTS_PER_PAGE * page).limit(POSTS_PER_PAGE):
-                if result['object'] == 'bucket':
-                    id = result['bucket']['id']
-                    text = result['bucket']['description']
-                    img_id = result['bucket']['img_id']
-                    fb_feed_id = result['bucket']['fb_feed_id']
-                elif result['object'] == 'journal':
-                    id = result['journal']['id']
-                    text = result['journal']['text']
-                    img_id = result['journal']['img_id']
-                    fb_feed_id = result['journal']['fb_feed_id']
-
-                if result['user']['profile_img_id'] == 0:
-                    if result['user']['fb_id'] == 0:
-                        profile_img = None
-                    else:
-                        social_user = UserSocial.query.filter_by(user_id=result['user']['id']).first()
-                        graph = facebook.GraphAPI(social_user.access_token)
-                        args = {'type':'normal'}
-                        profile_img = graph.get_object(result['user']['fb_id']+'/picture', **args)['url']
-                else:
-                    profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
-
-                data_asis.append({'type':result['object'],
-                             '_id':str(result['_id']),
-                             'id':id,
-                             'title':result['bucket']['title'],
-                             'deadline':result['bucket']['deadline'].strftime('%Y-%m-%d'),
-                             'lst_mod_dt':result['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-                             'contents':{'text':None if text is None else text,
-                                         'img':None if img_id is None else url_for('send_pic', img_id=img_id, img_type='thumb_md', _external=True)},
-                             'user_id':result['user']['id'],
-                             'username':result['user']['username'],
-                             'user_profile_img': profile_img,
-                             'action':result['action']['type'],
-                             'fb_feed_id':fb_feed_id})
-                data_tobe.append(json.loads(json_util.dumps(result)))
-            return {"status": "success", "data": data_asis, "data_tobe": data_tobe}, 200
-
-            # q1 = db.session.query(literal_column('"Bucket"').label('type'),
-            #                       Bucket.id.label('id'),
-            #                       Bucket.title.label('title'),
-            #                       Bucket.deadline.label('deadline'),
-            #                       Bucket.lst_mod_dt.label('lst_mod_dt'),
-            #                       Bucket.description.label('text'),
-            #                       Bucket.cvr_img_id.label('img_id'),
-            #                       Bucket.reg_dt.label('reg_dt'),
-            #                       Bucket.fb_feed_id.label('fb_feed_id'),
-            #                       User.username.label('username'),
-            #                       User.profile_img_id.label('user_img'),
-            #                       User.fb_id.label('fb_id'),
-            #                       User.id.label('user_id')) \
-            #     .filter(Bucket.user_id == User.id)
-            # # .filter(Bucket.lst_mod_dt < oldest if type == 'older' else Bucket.lst_mod_dt > oldest).limit(10)
-            # q2 = db.session.query(literal_column('"Timeline"').label('type'),
-            #                       Post.id.label('id'),
-            #                       Bucket.title.label('title'),
-            #                       Bucket.deadline.label('deadline'),
-            #                       Post.lst_mod_dt.label('lst_mod_dt'),
-            #                       Post.text.label('text'),
-            #                       Post.img_id.label('img_id'),
-            #                       Post.reg_dt.label('reg_dt'),
-            #                       Post.fb_feed_id.label('fb_feed_id'),
-            #                       User.username.label('username'),
-            #                       User.profile_img_id.label('user_img'),
-            #                       User.fb_id.label('fb_id'),
-            #                       User.id.label('user_id')) \
-            #     .filter(Bucket.id == Post.bucket_id) \
-            #     .filter(Bucket.user_id == User.id)
-            # q = q1.union(q2).order_by('lst_mod_dt desc')[POSTS_PER_PAGE * (page-1):POSTS_PER_PAGE * page]
+            results = mdb.newsfeed.find().sort("_id",-1).skip(POSTS_PER_PAGE * page).limit(POSTS_PER_PAGE)
         elif 'type' in request.args:
             if request.args['type'] not in ['older', 'newer']:
                 return {'status':'error', 'description':'Value of [TYPE] must be in [older, newer]'}, 403
             type = request.args['type']
-            baseline = datetime.datetime.strptime(request.args['baseline'], '%Y%m%d_%H%M%S')
-            q1 = db.session.query(literal_column('"Bucket"').label('type'),
-                                  Bucket.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
-                                  Bucket.description.label('text'),
-                                  Bucket.cvr_img_id.label('img_id'),
-                                  Bucket.reg_dt.label('reg_dt'),
-                                  Bucket.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.user_id == User.id)\
-                .filter(Bucket.lst_mod_dt < baseline if type == 'older' else Bucket.lst_mod_dt > baseline).limit(10)
-            q2 = db.session.query(literal_column('"Timeline"').label('type'),
-                                  Post.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Post.lst_mod_dt.label('lst_mod_dt'),
-                                  Post.text.label('text'),
-                                  Post.img_id.label('img_id'),
-                                  Post.reg_dt.label('reg_dt'),
-                                  Post.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.id == Post.bucket_id) \
-                .filter(Bucket.user_id == User.id)\
-                .filter(Post.lst_mod_dt < baseline if type == 'older' else Post.lst_mod_dt > baseline).limit(10)
-            q = q1.union(q2).order_by('lst_mod_dt desc').limit(10)
-        elif 'mdb_insert' in request.args and request.args['mdb_insert'] == 'wishb_mongodb_insert':
-            q1 = db.session.query(literal_column('"Bucket"').label('type'),
-                                  Bucket.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
-                                  Bucket.description.label('text'),
-                                  Bucket.cvr_img_id.label('img_id'),
-                                  Bucket.reg_dt.label('reg_dt'),
-                                  Bucket.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.user_id == User.id)
-            q2 = db.session.query(literal_column('"Timeline"').label('type'),
-                                  Post.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Post.lst_mod_dt.label('lst_mod_dt'),
-                                  Post.text.label('text'),
-                                  Post.img_id.label('img_id'),
-                                  Post.reg_dt.label('reg_dt'),
-                                  Post.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.id == Post.bucket_id) \
-                .filter(Bucket.user_id == User.id)
-            q = q1.union(q2).order_by('lst_mod_dt')
-            for i in q:
-                if i.type == 'Bucket':
-                    b = Bucket.query.filter_by(id=i.id).first()
-                    u = User.query.filter_by(id=b.user_id).first()
-                    logging_newsfeed({
-                        'object':'bucket',
-                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
-                                  'items':None},
-                        'timestamp':i.lst_mod_dt,
-                        'bucket':{'id':b.id,
-                                  'title':b.title,
-                                  'deadline':b.deadline,
-                                  'description':b.description,
-                                  'fb_feed_id':b.fb_feed_id,
-                                  'img_id':b.cvr_img_id},
-                        'user':{'id':u.id,
-                                'username':u.username,
-                                'fb_id':u.fb_id,
-                                'profile_img_id':u.profile_img_id}
-                    })
-                elif i.type == 'Timeline':
-                    p = Post.query.filter_by(id=i.id).first()
-                    b = Bucket.query.filter_by(id=p.bucket_id).first()
-                    u = User.query.filter_by(id=p.user_id).first()
-                    logging_newsfeed({
-                        'object':'journal',
-                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
-                                  'items':None},
-                        'timestamp':i.lst_mod_dt,
-                        'bucket':{'id':b.id,
-                                  'title':b.title,
-                                  'deadline':b.deadline,
-                                  'description':b.description,
-                                  'fb_feed_id':b.fb_feed_id,
-                                  'img_id':b.cvr_img_id},
-                        'journal':{'id':p.id,
-                                   'text':p.text,
-                                   'img_id':p.img_id,
-                                   'fb_feed_id':p.fb_feed_id},
-                        'user':{'id':u.id,
-                                'username':u.username,
-                                'fb_id':u.fb_id,
-                                'profile_img_id':u.profile_img_id}
-                    })
-        elif 'mdb' in request.args:
-            mdb = MongoClient(MONGODB_URI).wishb
-            data_asis = []
-            data_tobe = []
-            for r in mdb.newsfeed.find().limit(10):
-                if r['object'] == 'bucket':
-                    id = r['bucket']['id']
-                    text = r['bucket']['description']
-                    img_id = r['bucket']['img_id']
-                    fb_feed_id = r['bucket']['fb_feed_id']
-                elif r['object'] == 'journal':
-                    id = r['journal']['id']
-                    text = r['journal']['text']
-                    img_id = r['journal']['img_id']
-                    fb_feed_id = r['journal']['fb_feed_id']
-
-                if r['user']['profile_img_id'] == 0:
-                    if r['user']['fb_id'] == 0:
-                        profile_img = None
-                    else:
-                        social_user = UserSocial.query.filter_by(user_id=r['user']['id']).first()
-                        graph = facebook.GraphAPI(social_user.access_token)
-                        args = {'type':'normal'}
-                        profile_img = graph.get_object(r['user']['fb_id']+'/picture', **args)['url']
-                else:
-                    profile_img = None if r['user']['profile_img_id'] is None else url_for('send_pic', img_id=r['user']['profile_img_id'], img_type='thumb_sm', _external=True)
-
-                data_asis.append({'type':r['object'],
-                             '_id':str(r['_id']),
-                             'id':id,
-                             'title':r['bucket']['title'],
-                             'deadline':r['bucket']['deadline'].strftime('%Y-%m-%d'),
-                             'lst_mod_dt':r['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-                             'contents':{'text':None if text is None else text,
-                                         'img':None if img_id is None else url_for('send_pic', img_id=img_id, img_type='thumb_md', _external=True)},
-                             'user_id':r['user']['id'],
-                             'username':r['user']['username'],
-                             'user_profile_img': profile_img,
-                             'action':r['action']['type'],
-                             'fb_feed_id':fb_feed_id})
-                data_tobe.append(json.loads(json_util.dumps(r)))
-            return {"status": "success", "data": data_asis, "data_tobe": data_tobe}, 200
+            baseline = request.args['baseline']
+            if type == 'older':
+                results = mdb.newsfeed.find({'_id':{'$lt':ObjectId(baseline)}}).sort("_id",-1).limit(POSTS_PER_PAGE)
+            elif type == 'newer':
+                results = mdb.newsfeed.find({'_id':{'$gt':ObjectId(baseline)}}).sort("_id",-1)
         else:
             return {'status': 'error',
                     'description': 'Request parameter error'}, 403
 
-        data = []
-        for i in q:
-            if i.user_img == 0:
-                if i.fb_id == 0:
+        for result in results:
+            if result['object'] == 'bucket':
+                id = result['bucket']['id']
+                text = result['bucket']['description']
+                img_id = result['bucket']['img_id']
+                fb_feed_id = result['bucket']['fb_feed_id']
+            elif result['object'] == 'journal':
+                id = result['journal']['id']
+                text = result['journal']['text']
+                img_id = result['journal']['img_id']
+                fb_feed_id = result['journal']['fb_feed_id']
+
+            if result['user']['profile_img_id'] == 0:
+                if result['user']['fb_id'] == 0:
                     profile_img = None
                 else:
-                    social_user = UserSocial.query.filter_by(user_id=i.user_id).first()
+                    social_user = UserSocial.query.filter_by(user_id=result['user']['id']).first()
                     graph = facebook.GraphAPI(social_user.access_token)
                     args = {'type':'normal'}
-                    profile_img = graph.get_object(i.fb_id+'/picture', **args)['url']
+                    profile_img = graph.get_object(result['user']['fb_id']+'/picture', **args)['url']
             else:
-                profile_img = None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True)
-            data.append({
-                "type": i.type,
-                "id": i.id,
-                "title": i.title.encode('utf-8'),
-                "deadline": i.deadline.strftime("%Y-%m-%d"),
-                "lst_mod_dt": i.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                "contents": {"text": None if i.text is None else i.text.encode('utf-8'),
-                             "img": None if i.img_id is None else url_for('send_pic', img_id=i.img_id, img_type='thumb_md', _external=True)},
-                "user_id": i.user_id,
-                "username": i.username.encode('utf-8'),
-                "user_profile_img": profile_img,
-                "action": "Modified" if i.reg_dt < i.lst_mod_dt else "Registered",
-                "fb_feed_id": None if i.fb_feed_id is None else i.fb_feed_id
-            })
+                profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
 
-        return {"status": "success", "data": data}, 200
+            data_asis.append({'type':result['object'],
+                         '_id':str(result['_id']),
+                         'id':id,
+                         'title':result['bucket']['title'],
+                         'deadline':result['bucket']['deadline'].strftime('%Y-%m-%d'),
+                         'lst_mod_dt':result['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+                         'contents':{'text':None if text is None else text,
+                                     'img':None if img_id is None else url_for('send_pic', img_id=img_id, img_type='thumb_md', _external=True)},
+                         'user_id':result['user']['id'],
+                         'username':result['user']['username'],
+                         'user_profile_img': profile_img,
+                         'action':result['action']['type'],
+                         'action_items':result['action']['items'] if 'items' in result['action'] else None,
+                         'fb_feed_id':fb_feed_id})
+            data_tobe.append(json.loads(json_util.dumps(result)))
+
+        return {"status":"success", "data":data_asis, "data_tobe":data_tobe}, 200
 
 
 api.add_resource(Newsfeed, '/api/newsfeed', endpoint='newsfeed')
