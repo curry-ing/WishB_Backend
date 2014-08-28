@@ -1,16 +1,13 @@
 import sys
 
 from sqlalchemy import create_engine
-
 from flask import Flask, g
 from flask.ext import login
 from flask.ext.mail import Mail
 from flask.ext.babel import Babel
-from flask.ext.restful import Api
+from flask.ext.restful import Api, Resource
 from flask.ext.security import Security, SQLAlchemyUserDatastore
-
 from sqlalchemy.ext.declarative import declarative_base
-
 from werkzeug.contrib.fixers import ProxyFix
 
 sys.path.append('../..')
@@ -20,17 +17,22 @@ app.config.from_object('config')
 
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
-from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, LANGUAGES, SECRET_KEY, MONGODB_URI
+from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MONGODB_URI
 from app.models import db, Role, User
 from app.momentjs import momentjs
 
+from pymongo import MongoClient
+
 # RESTful API
 api = Api(app)
+api_res = Resource
 
 # DB
 db.metadata.bind = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], convert_unicode=True)
 Base = declarative_base()
+
+mdb = MongoClient(MONGODB_URI).wishb
 
 # Login Manager
 lm = login.LoginManager()
@@ -50,6 +52,7 @@ mail = Mail(app)
 
 # I18n and L10n
 babel = Babel(app)
+
 
 # Debugging
 if not app.debug:
@@ -74,6 +77,9 @@ if not app.debug:
 from app import models
 from app import views
 from app.forms import SearchForm
+from app.mod_api.users import mod_api
+
+app.register_blueprint(mod_api)
 
 @lm.user_loader
 def load_user(userid):
