@@ -679,6 +679,8 @@ class BucketAPI(Resource):
                         except:
                             pass
             if value is not None:
+                print key
+                print value
                 nf_action_list.append(key)
             setattr(b, key, value)
 
@@ -1374,7 +1376,7 @@ class BucketTimeline(Resource):
     @auth.login_required
     def post(self, bucket_id):
         b = Bucket.query.filter_by(id=bucket_id).first()
-        u = User.query.filter_by(id=b.user_id).first()
+        # u = User.query.filter_by(id=b.user_id).first()
         if b is None:
             return {'status': 'error',
                     'description': 'There\'s no bucket with id: ' + id}, 403
@@ -1688,8 +1690,7 @@ class TimelineContent(Resource):
 
             if params['fb_share'] in [True, 'true'] and post.fb_feed_id is None:
                 feed = {}
-                feed['message'] = g.user.username.encode('utf-8') + " get closer to dream '" + b.title.encode(
-                    'utf-8') + "' on Wish B"
+                feed['message'] = g.user.username.encode('utf-8') + " get closer to dream '" + b.title.encode('utf-8') + "' on Wish B"
                 feed['link'] = WISHB_SERVER_URI + "wish/" + str(b.id)
                 feed['caption'] = b.title.encode('utf8')
                 feed['description'] = "" if post.text is None else post.text.encode('utf-8')
@@ -1846,8 +1847,8 @@ class Report(Resource):
             return {'status': 'error', 'description': 'Report type is not valid.'}, 400
 
         if 'page' in request.args:
-            for result in mdb.report.find({'type': request.args['type']}).sort("_id", -1).skip(
-                                    POSTS_PER_PAGE * 2 * int(request.args['page'])).limit(POSTS_PER_PAGE * 2):
+            page = int(request.args['page'])
+            for result in mdb.report.find({'type': request.args['type']}).sort("_id", -1).skip(POSTS_PER_PAGE * 2 * page).limit(POSTS_PER_PAGE * 2):
                 data.append(json.loads(json_util.dumps(result)))
         else:
             return {'status': 'error', 'description': 'PAGE NUMBER required'}, 400
