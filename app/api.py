@@ -590,12 +590,15 @@ class BucketAPI(Resource):
         if b.user_id != g.user.id:
             return {'status': 'error', 'description': 'Unauthorized'}, 401
 
+        newsfeed_logging = False
         nf_action_list = []
+        
         for key in params:
             value = None if params[key] == "" else params[key]
 
             if key in ['status'] and value != getattr(b, key) and value == '1':
                 nf_action_list.append(key)
+                newsfeed_logging = True
 
             # Editable Fields
             if key not in ['title', 'status', 'private', 'deadline', 'description', 'parent_id', 'scope', 'range',
@@ -780,24 +783,25 @@ class BucketAPI(Resource):
                 'cvr_img_url': None if b.cvr_img_id is None else url_for('send_pic', img_id=b.cvr_img_id,
                                                                          img_type='thumb_md', _external=True)}
 
-        u = User.query.filter_by(id=b.user_id).first()
-        nf_data = {
-            'object':'bucket',
-            'action':{'type':'modified',
-                      'items':nf_action_list},
-            'timestamp':datetime.datetime.now(),
-            'bucket':{'id':b.id,
-                      'title':b.title,
-                      'deadline':b.deadline,
-                      'fb_feed_id':None if b.fb_feed_id is None else b.fb_feed_id,
-                      'description':None if b.description is None else b.description,
-                      'img_id':None if b.cvr_img_id is None else b.cvr_img_id},
-            'user':{'id':u.id,
-                    'username':u.username,
-                    'fb_id':u.fb_id,
-                    'profile_img_id':u.profile_img_id},
-        }
-        logging_newsfeed(nf_data)
+        # u = User.query.filter_by(id=b.user_id).first()
+        if newsfeed_logging:
+            nf_data = {
+                'object':'bucket',
+                'action':{'type':'modified',
+                          'items':nf_action_list},
+                'timestamp':datetime.datetime.now(),
+                'bucket':{'id':b.id,
+                          'title':b.title,
+                          'deadline':b.deadline,
+                          'fb_feed_id':None if b.fb_feed_id is None else b.fb_feed_id,
+                          'description':None if b.description is None else b.description,
+                          'img_id':None if b.cvr_img_id is None else b.cvr_img_id},
+                'user':{'id':g.user.id,
+                        'username':g.user.username,
+                        'fb_id':g.user.fb_id,
+                        'profile_img_id':g.user.profile_img_id},
+            }
+            logging_newsfeed(nf_data)
 
         logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status': 'success',
@@ -1733,27 +1737,27 @@ class TimelineContent(Resource):
                 'lst_mod_dt': None if post.lst_mod_dt is None else post.lst_mod_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 'fb_feed_id': None if post.fb_feed_id is None else post.fb_feed_id}
 
-        nf_data = {
-            'object':'journal',
-            'action':{'type':'modified'},
-                      # 'items':nf_action_list},
-            'timestamp':datetime.datetime.now(),
-            'bucket':{'id':b.id,
-                      'title':b.title,
-                      'deadline':b.deadline,
-                      'fb_feed_id':b.fb_feed_id,
-                      'description':b.description,
-                      'img_id':b.cvr_img_id},
-            'journal':{'id':post.id,
-                       'text':None if post.text is None else post.text,
-                       'fb_feed_id':post.fb_feed_id,
-                       'img_id':post.img_id},
-            'user':{'id':g.user.id,
-                    'username':g.user.username,
-                    'fb_id':g.user.fb_id,
-                    'profile_img_id':g.user.profile_img_id}
-        }
-        logging_newsfeed(nf_data)
+        # nf_data = {
+        #     'object':'journal',
+        #     'action':{'type':'modified'},
+        #               # 'items':nf_action_list},
+        #     'timestamp':datetime.datetime.now(),
+        #     'bucket':{'id':b.id,
+        #               'title':b.title,
+        #               'deadline':b.deadline,
+        #               'fb_feed_id':b.fb_feed_id,
+        #               'description':b.description,
+        #               'img_id':b.cvr_img_id},
+        #     'journal':{'id':post.id,
+        #                'text':None if post.text is None else post.text,
+        #                'fb_feed_id':post.fb_feed_id,
+        #                'img_id':post.img_id},
+        #     'user':{'id':g.user.id,
+        #             'username':g.user.username,
+        #             'fb_id':g.user.fb_id,
+        #             'profile_img_id':g.user.profile_img_id}
+        # }
+        # logging_newsfeed(nf_data)
 
 
         logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
