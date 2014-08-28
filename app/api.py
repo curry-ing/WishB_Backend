@@ -593,9 +593,12 @@ class BucketAPI(Resource):
         nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
-            
-            if value != getattr(b, key):
+
+            if key not in ['deadline','fb_share'] and value != getattr(b, key):
                 nf_action_list.append(key)
+            if key == 'deadline' and value != getattr(b, key).strftime('%Y-%m-%d %H:%M:%S'):
+                nf_action_list.append(key)
+
 
             # Editable Fields
             if key not in ['title', 'status', 'private', 'deadline', 'description', 'parent_id', 'scope', 'range',
@@ -1614,7 +1617,9 @@ class TimelineContent(Resource):
         nf_action_list = []
         for key in params:
             value = None if params[key] == "" else params[key]
-            if value != getattr(post, key):
+            if key not in ['fb_share', 'img_id', 'content_dt'] and value != getattr(post, key):
+                nf_action_list.append(key)
+            if key == 'content_dt' and value != getattr(post, key).strftime('%Y-%m-%d %H:%M:%S'):
                 nf_action_list.append(key)
 
             # Editable Fields
