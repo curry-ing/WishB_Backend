@@ -73,7 +73,7 @@ class User(db.Model, UserMixin):
         self.birthday = birthday
 
     def __repr__(self):
-        return '<User %r>' % self.username
+        return '<User %>' % self.username
 
     @staticmethod
     def make_valid_username(username):
