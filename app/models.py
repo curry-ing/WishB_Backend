@@ -58,7 +58,7 @@ class User(db.Model, UserMixin):
     title_50 = db.Column(db.String(128))
     title_60 = db.Column(db.String(128))
     profile_img_id = db.Column(db.Integer, db.ForeignKey('file.id'))
-    # last_read_notice = db.Column(db.String(128))
+    app_version = db.Column(db.String(128))
     followed = db.relationship('User',
         secondary = followers, 
         primaryjoin = (followers.c.follower_id == id), 

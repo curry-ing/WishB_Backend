@@ -17,7 +17,7 @@ from flask.ext.uploads import UploadSet, IMAGES, configure_uploads, patch_reques
 
 from hashlib import md5
 from rauth.service import OAuth2Service
-from sqlalchemy.sql import func, select, literal_column
+from sqlalchemy.sql import func
 # Source
 from app import db, api, app, mdb
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER

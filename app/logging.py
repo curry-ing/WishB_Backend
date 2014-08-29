@@ -1,9 +1,11 @@
 __author__ = 'masunghoon'
 
 from datetime import datetime
-from pymongo import MongoClient
-from config import MONGODB_URI
 from decorators import async
+from pymongo import MongoClient
+
+# from app import mdb
+from config import MONGODB_URI
 
 mdb = MongoClient(MONGODB_URI).wishb
 
@@ -40,7 +42,7 @@ def logging_api(uid, api_name, request_type):
 @async
 def logging_social(uid, service_name, action, target, type): 
     if uid is None:
-    	uid = "Anonymous"
+        uid = "Anonymous"
     social_log = mdb.social_log
 
     log = {"user_id": uid,

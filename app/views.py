@@ -6,14 +6,13 @@ from flask.ext.httpauth import HTTPBasicAuth
 from flask.ext.uploads import UploadSet, IMAGES, configure_uploads
 from rauth.service import OAuth2Service
 
-from app import app, db, babel
+from app import app, db, babel, mdb
 from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
 from logging import logging_auth, logging_downlaod
 from guess_language import guessLanguage
-from pymongo import MongoClient
 
 from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI, MONGODB_URI
 
@@ -181,10 +180,14 @@ def get_auth_token():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
 
-    mdb = MongoClient(MONGODB_URI).wishb
     latest_app = mdb.release.find_one(sort=[("version", -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     token = g.user.generate_auth_token()
+    if request.args['app_version'] != g.user.app_version:
+        u = User.query.filter_by(id=g.user.id).first()
+        u.app_version = request.args['app_version']
+        db.session.commit()
+
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
                                     'username': g.user.username,
@@ -227,9 +230,12 @@ def get_resource():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
-    mdb = MongoClient(MONGODB_URI).wishb
     latest_app = mdb.release.find_one(sort=[("version", -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
+    if request.args['app_version'] != g.user.app_version:
+        u = User.query.filter_by(id=g.user.id).first()
+        u.app_version = request.args['app_version']
+        db.session.commit()
 
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
@@ -417,9 +423,9 @@ def send_file(filename, extension):
 
     if filename == 'wishb_apk':
         if extension == 'latest':
-            apk = MongoClient(MONGODB_URI).wishb.release.find_one(sort=[("version", -1)])
+            apk = mdb.release.find_one(sort=[("version", -1)])
         else:
-            apk = MongoClient(MONGODB_URI).wishb.release.find_one({"version":extension})
+            apk = mdb.release.find_one({"version":extension})
         return redirect(apk['url'], 302)
     else:
         basedir = os.path.abspath('app/static/uploads/files')
