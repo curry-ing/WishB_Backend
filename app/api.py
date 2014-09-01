@@ -589,13 +589,13 @@ class BucketAPI(Resource):
             return {'status': 'error', 'description': 'Unauthorized'}, 401
 
         newsfeed_logging = False
-        nf_action_list = []
+        nf_action_item = None
 
         for key in params:
             value = None if params[key] == "" else params[key]
 
             if key in ['status'] and getattr(b, key) == '0' and value == '1':
-                nf_action_list.append({key:'completed'})
+                nf_action_item = {key:'completed'}
                 newsfeed_logging = True
 
             # Editable Fields
@@ -725,7 +725,7 @@ class BucketAPI(Resource):
             db.session.refresh(f)
 
             setattr(b, 'cvr_img_id', f.id)
-            # nf_action_list.append('photo')
+            # nf_action_item.append('photo')
 
         if 'fb_share' in params:
             try:
@@ -744,7 +744,7 @@ class BucketAPI(Resource):
 
                     facebook_feed(feed, g.user.id, 'bucket', b.id)
                     logging_social(g.user.id, 'Facebook', 'share', 'bucket', inspect.stack()[0][3])
-                    # nf_action_list.append('fb_share')
+                    # nf_action_item.append('fb_share')
                 elif params['fb_share'] in [False, 'false']:
                     if b.fb_feed_id is not None:
                         social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
@@ -786,7 +786,7 @@ class BucketAPI(Resource):
             nf_data = {
                 'object':'bucket',
                 'action':{'type':'modified',
-                          'items':nf_action_list},
+                          'items':nf_action_item},
                 'timestamp':datetime.datetime.now(),
                 'bucket':{'id':b.id,
                           'title':b.title,
@@ -1612,13 +1612,13 @@ class TimelineContent(Resource):
                     'description': 'Unauthorized'}, 401
 
         b = Bucket.query.filter_by(id=post.bucket_id).first()
-        # nf_action_list = []
+        # nf_action_item = []
         for key in params:
             value = None if params[key] == "" else params[key]
             # if key not in ['fb_share', 'img_id', 'content_dt'] and value != getattr(post, key):
-            #     nf_action_list.append(key)
+            #     nf_action_item.append(key)
             # if key == 'content_dt' and value != getattr(post, key).strftime('%Y-%m-%d %H:%M:%S'):
-            #     nf_action_list.append(key)
+            #     nf_action_item.append(key)
 
             # Editable Fields
             if key not in ['text', 'url1', 'url2', 'url3', 'img_id', 'fb_share', 'content_dt']:
@@ -1684,7 +1684,7 @@ class TimelineContent(Resource):
             db.session.refresh(f)
 
             setattr(post, 'img_id', f.id)
-            # nf_action_list.append('photo')
+            # nf_action_item.append('photo')
 
         if 'fb_share' in params:
             social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
@@ -1704,7 +1704,7 @@ class TimelineContent(Resource):
 
                 facebook_feed(feed, g.user.id, 'timeline', post.id)
                 logging_social(g.user.id, 'Facebook', 'share', 'timeline', inspect.stack()[0][3])
-                # nf_action_list.append('fb_share')
+                # nf_action_item.append('fb_share')
 
             elif params['fb_share'] in [False, 'false']:
                 if post.fb_feed_id is not None:
@@ -1738,7 +1738,7 @@ class TimelineContent(Resource):
         # nf_data = {
         #     'object':'journal',
         #     'action':{'type':'modified'},
-        #               # 'items':nf_action_list},
+        #               # 'items':nf_action_item},
         #     'timestamp':datetime.datetime.now(),
         #     'bucket':{'id':b.id,
         #               'title':b.title,
