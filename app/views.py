@@ -455,9 +455,10 @@ def send_file(filename, extension):
 
     if filename == 'wishb_apk':
         if extension == 'latest':
-            apk = mdb.release.find_one(sort=[("version", -1)])
+            apk = mdb.release.find_one(sort=[('version.major', -1),('version.minor', -1),('version.tiny', -1)])
         else:
-            apk = mdb.release.find_one({"version":extension})
+            abort(404)
+            # apk = mdb.release.find_one({"version":extension})
         return redirect(apk['url'], 302)
     else:
         basedir = os.path.abspath('app/static/uploads/files')
