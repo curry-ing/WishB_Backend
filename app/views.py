@@ -184,7 +184,8 @@ def get_auth_token():
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
     curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
-    if curr_app_version is not None and curr_app_version != prev_app_version:
+    os = None if 'os' not in request.args else request.args['os']
+    if curr_app_version is not None and os is not None and curr_app_version != prev_app_version:
         u = User.query.filter_by(id=g.user.id).first()
         u.app_version = curr_app_version
         db.session.commit()
@@ -192,7 +193,7 @@ def get_auth_token():
         obj = {"user":{"id":g.user.id,
                        "username":g.user.username,
                        "email":g.user.email},
-               "os":"android",
+               "os":os,
                "previous_ver":prev_app_version,
                "updated_ver":curr_app_version,
                "update_date":datetime.now()
@@ -244,12 +245,27 @@ def get_resource():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     logging_auth(g.user.id, "login", "total")
+
+    # check user app version & logging
     latest_app = mdb.release.find_one(sort=[("version", -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
-    if request.args['app_version'] != g.user.app_version:
+    prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
+    curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
+    os = None if 'os' not in request.args else request.args['os']
+    if curr_app_version is not None and os is not None and curr_app_version != prev_app_version:
         u = User.query.filter_by(id=g.user.id).first()
-        u.app_version = request.args['app_version']
+        u.app_version = curr_app_version
         db.session.commit()
+
+        obj = {"user":{"id":g.user.id,
+                       "username":g.user.username,
+                       "email":g.user.email},
+               "os":os,
+               "previous_ver":prev_app_version,
+               "updated_ver":curr_app_version,
+               "update_date":datetime.now()
+               }
+        logging_update(obj)
 
     return jsonify({'status':'success',
                     'data':{'id': g.user.id,
