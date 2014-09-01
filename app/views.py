@@ -180,7 +180,7 @@ def get_auth_token():
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
     # check user app version & logging
-    latest_app = mdb.release.find_one(sort=[("version_n", -1)])
+    latest_app = mdb.release.find_one(sort=[('version.major', -1),('version.minor', -1),('version.tiny', -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
     curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
@@ -219,8 +219,8 @@ def get_auth_token():
                                     'fb_id':None if g.user.fb_id is None else g.user.fb_id,
                                     'fb_token':fb_token,
                                     'is_admin':g.user.is_admin,
-                                    'latest_app':{'version':latest_app['version'],
-                                                  'version_n':latest_app['version_n'],
+                                    'latest_app':{'version':str(latest_app['version']['major']) + '.' + str(latest_app['version']['minor']),
+                                                  'version_n':latest_app['version'],
                                                   'url':latest_app['url']},
                                     'latest_notice':str(latest_notice['_id']),
                                     'confirmed_at':g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None},
@@ -248,7 +248,7 @@ def get_resource():
     logging_auth(g.user.id, "login", "total")
 
     # check user app version & logging
-    latest_app = mdb.release.find_one(sort=[("version_n", -1)])
+    latest_app = mdb.release.find_one(sort=[('version.major', -1),('version.minor', -1),('version.tiny', -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
     curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
@@ -284,8 +284,8 @@ def get_resource():
                             'fb_id':None if g.user.fb_id is None else g.user.fb_id,
                             'fb_token':fb_token,
                             'is_admin':g.user.is_admin,
-                            'latest_app':{'version':latest_app['version'],
-                                          'version_n':latest_app['version_n'],
+                            'latest_app':{'version':str(latest_app['version']['major']) + '.' + str(latest_app['version']['minor']),
+                                          'version_n':latest_app['version'],
                                           'url':latest_app['url']},
                             'latest_notice':str(latest_notice['_id']),
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
