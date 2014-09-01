@@ -67,6 +67,7 @@ def logging_downlaod(ip_addr):
 
 @async
 def logging_newsfeed(obj):
+    print obj
     mdb.newsfeed.insert(obj)
 
 @async
