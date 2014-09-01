@@ -11,7 +11,7 @@ from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
-from logging import logging_auth, logging_downlaod
+from logging import logging_auth, logging_downlaod, logging_update
 from guess_language import guessLanguage
 
 from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI, MONGODB_URI
@@ -179,14 +179,31 @@ def get_auth_token():
         if g.user.fb_id is not None and g.user.fb_id != 0:
             fb_token = UserSocial.query.filter_by(user_id=g.user.id).first().access_token
 
-
+    # check user app version & logging
     latest_app = mdb.release.find_one(sort=[("version", -1)])
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
-    token = g.user.generate_auth_token()
-    if request.args['app_version'] != g.user.app_version:
+    prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
+    curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
+    print prev_app_version
+    print curr_app_version
+    if curr_app_version is not None and curr_app_version != prev_app_version:
         u = User.query.filter_by(id=g.user.id).first()
-        u.app_version = request.args['app_version']
+        u.app_version = curr_app_version
         db.session.commit()
+        
+        obj = {"user":{"id":g.user.id,
+                       "username":g.user.username,
+                       "email":g.user.email},
+               "os":"android",
+               "previous_ver":prev_app_version,
+               "updated_ver":curr_app_version,
+               "update_date":datetime.now()
+               }
+        print obj
+        logging_update(obj)
+
+    # generating Token for user
+    token = g.user.generate_auth_token()
 
     return jsonify({'status':'success',
                     'data':{'user':{'id': g.user.id,
