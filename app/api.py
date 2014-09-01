@@ -590,12 +590,11 @@ class BucketAPI(Resource):
 
         newsfeed_logging = False
         nf_action_item = None
-        print newsfeed_logging
 
         for key in params:
             value = None if params[key] == "" else params[key]
 
-            if key in ['status'] and getattr(b, key) == '0' and value == '1':
+            if key in ['status'] and getattr(b, key) == 0 and int(value) == 1:
                 nf_action_item = {key:'completed'}
                 newsfeed_logging = True
 
@@ -685,7 +684,6 @@ class BucketAPI(Resource):
                             pass
             setattr(b, key, value)
 
-        print newsfeed_logging
 
         if 'photo' in request.files:
             upload_type = 'photo'
@@ -785,7 +783,6 @@ class BucketAPI(Resource):
                                                                          img_type='thumb_md', _external=True)}
 
         # u = User.query.filter_by(id=b.user_id).first()
-        print newsfeed_logging
         if newsfeed_logging:
             nf_data = {
                 'object':'bucket',
