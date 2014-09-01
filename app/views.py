@@ -184,8 +184,6 @@ def get_auth_token():
     latest_notice = mdb.notice.find_one(sort=[("_id", -1)])
     prev_app_version = "undefined" if g.user.app_version is None else g.user.app_version
     curr_app_version = None if 'app_version' not in request.args else request.args['app_version']
-    print prev_app_version
-    print curr_app_version
     if curr_app_version is not None and curr_app_version != prev_app_version:
         u = User.query.filter_by(id=g.user.id).first()
         u.app_version = curr_app_version
@@ -199,7 +197,6 @@ def get_auth_token():
                "updated_ver":curr_app_version,
                "update_date":datetime.now()
                }
-        print obj
         logging_update(obj)
 
     # generating Token for user
