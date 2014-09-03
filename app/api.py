@@ -215,7 +215,6 @@ class UserAPI(Resource):
         }
 
         user = mdb.users.find_one({'email':u.email})
-        print user
         mdb_data = {'_id':user['_id'],
                     'email':user['email'],
                     'username':user['username'],
@@ -2058,158 +2057,36 @@ class Newsfeed(Resource):
         super(Newsfeed, self).__init__()
 
     def get(self):
-        # print "1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
         data_asis = []
-        # print "2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
         data_tobe = []
-        # print "3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+        nf_count = mdb.newsfeed.count()
         if 'page' in request.args:
-            # print "4-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             page = int(request.args['page']) - 1
-            # print "4-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             results = mdb.newsfeed.find().sort("_id",-1).skip(POSTS_PER_PAGE * page).limit(POSTS_PER_PAGE)
         elif 'type' in request.args:
-            # print "5-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if request.args['type'] not in ['older', 'newer']:
                 return {'status':'error', 'description':'Value of [TYPE] must be in [older, newer]'}, 403
-            # print "5-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             type = request.args['type']
-            # print "5-3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             baseline = request.args['baseline']
-            # print "5-4 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if type == 'older':
-                # print "5-5-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 results = mdb.newsfeed.find({'_id':{'$lt':ObjectId(baseline)}}).sort("_id",-1).limit(POSTS_PER_PAGE)
             elif type == 'newer':
-                # print "5-5-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 results = mdb.newsfeed.find({'_id':{'$gt':ObjectId(baseline)}}).sort("_id",-1)
-        elif 'mdb_insert' in request.args and request.args['mdb_insert'] == 'wishb_mongodb_insert':
-
-            q1 = db.session.query(literal_column('"Bucket"').label('type'),
-                                  Bucket.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
-                                  Bucket.description.label('text'),
-                                  Bucket.cvr_img_id.label('img_id'),
-                                  Bucket.reg_dt.label('reg_dt'),
-                                  Bucket.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.user_id == User.id)
-            q2 = db.session.query(literal_column('"Timeline"').label('type'),
-                                  Post.id.label('id'),
-                                  Bucket.title.label('title'),
-                                  Bucket.deadline.label('deadline'),
-                                  Post.lst_mod_dt.label('lst_mod_dt'),
-                                  Post.text.label('text'),
-                                  Post.img_id.label('img_id'),
-                                  Post.reg_dt.label('reg_dt'),
-                                  Post.fb_feed_id.label('fb_feed_id'),
-                                  User.username.label('username'),
-                                  User.profile_img_id.label('user_img'),
-                                  User.fb_id.label('fb_id'),
-                                  User.id.label('user_id')) \
-                .filter(Bucket.id == Post.bucket_id) \
-                .filter(Bucket.user_id == User.id)
-            q = q1.union(q2).order_by('lst_mod_dt')
-            for i in q:
-
-                if i.user_img == 0:
-                    if i.fb_id == 0 or i.fb_id is None:
-                        profile_img = None
-                    else:
-                        social_user = UserSocial.query.filter_by(user_id=i.user_id).first()
-                        graph = facebook.GraphAPI(social_user.access_token)
-                        args = {'type':'normal'}
-                        profile_img = graph.get_object(i.fb_id+'/picture', **args)['url']
-                else:
-                    profile_img = None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True)
-
-
-                if i.type == 'Bucket':
-                    b = Bucket.query.filter_by(id=i.id).first()
-                    u = User.query.filter_by(id=b.user_id).first()
-                    logging_newsfeed({
-                        'object':'bucket',
-                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
-                                  'items':None},
-                        'timestamp':i.lst_mod_dt,
-                        'bucket':{'id':b.id,
-                                  'title':b.title,
-                                  'deadline':b.deadline,
-                                  'description':b.description,
-                                  'fb_feed_id':b.fb_feed_id,
-                                  'img_id':b.cvr_img_id},
-                        'user':{'id':u.id,
-                                'username':u.username,
-                                'fb_id':u.fb_id,
-                                'profile_img':profile_img}
-                    })
-                elif i.type == 'Timeline':
-                    p = Post.query.filter_by(id=i.id).first()
-                    b = Bucket.query.filter_by(id=p.bucket_id).first()
-                    u = User.query.filter_by(id=p.user_id).first()
-                    logging_newsfeed({
-                        'object':'journal',
-                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
-                                  'items':None},
-                        'timestamp':i.lst_mod_dt,
-                        'bucket':{'id':b.id,
-                                  'title':b.title,
-                                  'deadline':b.deadline,
-                                  'description':b.description,
-                                  'fb_feed_id':b.fb_feed_id,
-                                  'img_id':b.cvr_img_id},
-                        'journal':{'id':p.id,
-                                   'text':p.text,
-                                   'img_id':p.img_id,
-                                   'fb_feed_id':p.fb_feed_id},
-                        'user':{'id':u.id,
-                                'username':u.username,
-                                'fb_id':u.fb_id,
-                                'profile_img':profile_img}
-                    })
         else:
-            print "6 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             return {'status': 'error',
                     'description': 'Request parameter error'}, 403
 
-        i = 0
         for result in results:
-            # print "7-" + str(i) + "-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if result['object'] == 'bucket':
-                # print "7-" + str(i) + "-2b : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 id = result['bucket']['id']
                 text = result['bucket']['description']
                 img_id = result['bucket']['img_id']
                 fb_feed_id = result['bucket']['fb_feed_id']
             elif result['object'] == 'journal':
-                # print "7-" + str(i) + "-2j : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 id = result['journal']['id']
                 text = result['journal']['text']
                 img_id = result['journal']['img_id']
                 fb_feed_id = result['journal']['fb_feed_id']
-
-            # if result['user']['profile_img_id'] == 0:
-            #     print "7-" + str(i) + "-3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #     if result['user']['fb_id'] == 0:
-            #         print "7-" + str(i) + "-4 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #         profile_img = None
-            #     else:
-            #         print "7-" + str(i) + "-5 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #         social_user = UserSocial.query.filter_by(user_id=result['user']['id']).first()
-            #         print "7-" + str(i) + "-6 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #         graph = facebook.GraphAPI(social_user.access_token)
-            #         print "7-" + str(i) + "-7 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #         args = {'type':'normal'}
-            #         print "7-" + str(i) + "-8 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #         profile_img = graph.get_object(result['user']['fb_id']+'/picture', **args)['url']
-            # else:
-            #     print "7-" + str(i) + "-9 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
-            #     profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
 
             data_asis.append({'type':result['object'],
                          '_id':str(result['_id']),
@@ -2225,10 +2102,9 @@ class Newsfeed(Resource):
                          'action':result['action']['type'],
                          'action_items':result['action']['items'] if 'items' in result['action'] else None,
                          'fb_feed_id':fb_feed_id})
-            # print "7-" + str(i) + "-10 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             data_tobe.append(json.loads(json_util.dumps(result)))
 
-        return {"status":"success", "data":data_asis, "data_tobe":data_tobe}, 200
+        return {"status":"success", "data":data_asis, "data_tobe":data_tobe, "count":nf_count}, 200
 
 
 api.add_resource(Newsfeed, '/api/newsfeed', endpoint='newsfeed')
