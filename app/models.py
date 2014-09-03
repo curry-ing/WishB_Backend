@@ -195,7 +195,7 @@ class Post(db.Model):
     fb_feed_id = db.Column(db.String(128))
 
     def __repr__(self):
-        return '<Post %r>' % self.body
+        return '<Post %r>' % self.id
 
 
 class Bucket(db.Model):

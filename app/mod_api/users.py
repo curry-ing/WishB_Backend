@@ -3,20 +3,18 @@ import json
 import random
 import datetime
 
-from bson import json_util, objectid
-from flask import jsonify, request
+from bson import json_util, ObjectId
+from flask import jsonify, request, url_for
 
-from app import mdb
+from app import mdb, httpAuth
 from app.mod_api import mod_api
-from app.utils import is_email, hash_password
+from app.utils import is_email, hash_password, upload_photo
 
 from hashlib import md5
 
-
 ##### /users - Userlist ###########################################
-
 @mod_api.route('/users', methods=['GET'])
-def get_userlist():
+def get_users():
     data = []
     for result in mdb.users.find():
         data.append(json.loads(json_util.dumps(result)))
@@ -24,7 +22,7 @@ def get_userlist():
 
 
 @mod_api.route('/users', methods=['POST'])
-def add_user():
+def post_user():
     if request.json:
         params = request.json
     elif request.form:
@@ -57,12 +55,15 @@ def add_user():
     else:
         birthday = params['birthday']
 
+    # TODO: Check must-read notices & insert to unread_notices
+
     try:
         user_id = mdb.users.insert({'email':params['email'],
                       'password':hash_password(params['password']),
                       'username':username,
                       'birthday':birthday,
-                      'key':md5('ACTIVATION'+str(int(random.random()*10000))).hexdigest()})
+                      'key':{'activate':md5('ACTIVATION'+str(int(random.random()*10000))).hexdigest()},
+                      'unread_notices':[]})
     except:
         return jsonify({'status':'error', 'description':'Database Error'}),500
 
@@ -74,11 +75,10 @@ def add_user():
 
 
 ##### /user - Specific User #########################################
-
 @mod_api.route('/user/<id>', methods=['GET'])
 def get_user(id):
     try:
-        user = mdb.users.find_one({'_id':objectid.ObjectId(id)})
+        user = mdb.users.find_one({'_id':ObjectId(id)})
     except:
         return jsonify({'status':'error', 'description':'User ID is invalid'}), 400
 
@@ -97,6 +97,7 @@ def put_user(id):
     else:
         return jsonify({'status': 'error', 'description': 'Request Parameter Missing!'}), 400
 
+    data = {}
     for key in params:
         value = None if params[key] == "" else params[key]
 
@@ -106,7 +107,7 @@ def put_user(id):
         if key == 'password':
             if len(value) < 6:
                 return jsonify({'status':'error', 'description':'Password too short'}), 403
-            key['password'] = hash_password(value)
+            data['password'] = hash_password(params['password'])
 
         # Birthday can only be None or 8-digit integer(between 1900/01/01 ~ currentYear's 12/31)
         if key == 'birthday' and value is not None:
@@ -115,9 +116,21 @@ def put_user(id):
                 int(value[4:6]) < 0 or int(value[4:6]) > 12 or int(value[6:8]) < 0 or int(value[6:8]) > 31:
                 return jsonify({'status': 'error',
                                 'description': "Invalid value for Birthday: " + value[0:4] + '/' + value[4:6] + '/' + value[6:8]}), 400
+        else:
+            data['birthday'] = params['birthday']
+
         # Username cannot be null
-        if key == 'username':
-            if value == None:
-                return jsonify({'status':'error', 'description':'Username cannot be blank'}), 403
+        if key == 'username' and value == None:
+            return jsonify({'status':'error', 'description':'Username cannot be blank'}), 403
+        else:
+            data['username'] = params['username']
+
+
+    if 'photo' in request.files:
+        data['profile_img']['id'] = upload_photo(request.files['photo'])
+        data['profile_img']['url'] = url_for('send_pic', img_id=data['profile_img']['id'], img_size='thumb_sm', _external=True)
+
+    mdb.users.update({'_id':ObjectId(id)}, {'$set':data}, upsert=True)
 
     return jsonify({'status':'success', 'data':'data'}), 201
+

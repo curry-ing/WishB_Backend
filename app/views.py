@@ -6,12 +6,12 @@ from flask.ext.httpauth import HTTPBasicAuth
 from flask.ext.uploads import UploadSet, IMAGES, configure_uploads
 from rauth.service import OAuth2Service
 
-from app import app, db, babel, mdb
+from app import app, httpAuth, db, babel, mdb
 from forms import LoginForm, EditForm, PostForm, SearchForm, RegisterForm
 from models import User, Post, Bucket, File, UserSocial
 from emails import follower_notification
 from translate import microsoft_translate
-from logging import logging_auth, logging_downlaod, logging_update
+from logging import logging_auth, logging_download, logging_update
 from guess_language import guessLanguage
 
 from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY_TIMEOUT, FB_CLIENT_ID, FB_CLIENT_SECRET, WISHB_SERVER_URI, MONGODB_URI
@@ -19,13 +19,12 @@ from config import POSTS_PER_PAGE, MAX_SEARCH_RESULTS, LANGUAGES, DATABASE_QUERY
 from datetime import datetime
 
 import os
-import api
-import httplib, urllib
 import facebook
 import statsd
+import urllib, httplib
+import api
 
 now = datetime.utcnow()
-auth = HTTPBasicAuth()
 
 graph_url = 'https://graph.facebook.com/'
 fb = OAuth2Service(name='facebook',
@@ -103,7 +102,7 @@ def notice():
 
 ##### SEARCHING #############################################
 @app.route('/search', methods=['POST'])
-@auth.login_required
+@httpAuth.login_required
 def search():
     if not g.search_form.validate_on_submit():
         return redirect(url_for('index'))
@@ -111,7 +110,7 @@ def search():
 
 
 @app.route('/search_results/<query>')
-@auth.login_required
+@httpAuth.login_required
 def search_results(query):
     results = Post.query.whoosh_search(query, MAX_SEARCH_RESULTS).all()
     return render_template('search_results.html', query=query, results=results)
@@ -119,7 +118,7 @@ def search_results(query):
 
 ##### TRANSLATION #############################################
 @app.route('/translate', methods=['POST'])
-@auth.login_required
+@httpAuth.login_required
 def translate():
     return jsonify({
         'text': microsoft_translate(
@@ -162,8 +161,8 @@ def internal_error(error):
 
 ##### Authentication #######################################
 @app.route('/api/token')
-@auth.login_required
-def get_auth_token():
+@httpAuth.login_required
+def get_auth_token_old():
     fb_token = None
     if g.user.profile_img_id == 0:
         if g.user.fb_id == 0:
@@ -228,8 +227,8 @@ def get_auth_token():
 
 
 @app.route('/api/resource')
-@auth.login_required
-def get_resource():
+@httpAuth.login_required
+def get_resource_old():
     fb_token = None
     if g.user.profile_img_id == 0:
         if g.user.fb_id == 0:
@@ -291,7 +290,7 @@ def get_resource():
                             'confirmed_at': g.user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if g.user.confirmed_at else None }})
 
 
-@auth.verify_password
+@httpAuth.verify_password
 def verify_password(username_or_token, password):
     # first try to authenticate by token
     if password == "facebook":
@@ -410,7 +409,7 @@ photos = UploadSet('photos',IMAGES)
 configure_uploads(app, photos)
 
 @app.route('/upload', methods=['GET','POST'])
-@auth.login_required
+@httpAuth.login_required
 def upload():
     if request.method == 'POST' and 'photo' in request.files:
         filename = photos.save(request.files['photo'])
@@ -451,7 +450,7 @@ def send_pic(img_id,img_type):
 
 @app.route('/file/<filename>.<extension>')
 def send_file(filename, extension):
-    logging_downlaod(request.remote_addr)
+    logging_download(request.remote_addr)
 
     if filename == 'wishb_apk':
         if extension == 'latest':
@@ -479,7 +478,7 @@ def send_file(filename, extension):
 ##### DO NOT USE ANYMORE ############################################
 @app.route('/userprofile/<username>')
 @app.route('/userprofile/<username>/<int:page>')
-@auth.login_required
+@httpAuth.login_required
 def userprofile(username, page=1):
     user = User.query.filter_by(username=username).first()
     if user is None:
@@ -490,7 +489,7 @@ def userprofile(username, page=1):
 
 
 @app.route('/edit', methods=['GET', 'POST'])
-@auth.login_required
+@httpAuth.login_required
 def edit():
     form = EditForm(g.user.username)
     if form.validate_on_submit():
@@ -548,7 +547,7 @@ def unfollow(username):
 
 # @app.route('/index', methods=['GET', 'POST'])
 # @app.route('/index/<int:page>', methods=['GET', 'POST'])
-# @auth.login_required
+# @httpAuth.login_required
 # def index(page=1):
 #     form = PostForm()
 #     if form.validate_on_submit():
@@ -565,7 +564,7 @@ def unfollow(username):
 
 
 # @app.route('/delete/<int:id>')
-# @auth.login_required
+# @httpAuth.login_required
 # def delete(id):
 #     post = Post.query.get(id)
 #     if post is None:
@@ -623,3 +622,135 @@ def unfollow(username):
 #             return redirect(url_for('index'))
 #     return render_template('login_old.html', title='Login', form=form)
 
+
+##### DATA TRANSFER #####################################
+@app.route('/api/transfer/users')
+def user_transfer():
+    try:
+        users = User.query.filter_by().all()
+        for user in users:
+            if user.fb_id is not None:
+                access_token = UserSocial.query.filter_by(user_id=user.id).first().access_token
+                graph = facebook.GraphAPI(access_token)
+                args = {'type':'normal'}
+            data = {'email':user.email,
+                    'mysql_id':user.id,
+                    'password':user.password,
+                    'username':user.username,
+                    'about_me':user.about_me,
+                    'birthday':user.birthday,
+                    'is_admin':user.is_admin,
+                    'is_active':1,
+                    'login_fault':0,
+                    'app_version':user.app_version,
+                    'key':None if user.key is None else {'activate':user.key},
+                    'timestamp':{'last_seen':user.last_seen,
+                                 'confirmed':user.confirmed_at,
+                                 'registered':user.last_seen},
+                    'social':{'facebook':None if user.fb_id is None else {'id':user.fb_id,
+                                                                          'token':access_token,
+                                                                          'profile_img_url':graph.get_object(user.fb_id+'/picture', **args)['url']}},
+                    'profile_img':None if user.profile_img_id in (None, 0) else {'id':user.profile_img_id,
+                                                                                 'url':url_for('send_pic', img_id=user.profile_img_id, img_type='thumb_sm', _external=True)}}
+
+            mdb.users.insert(data)
+    except:
+        return jsonify({'status':'error'}), 403
+
+    return jsonify({'status':'success'}), 200
+
+
+@app.route('/api/transfer/files')
+def file_transfer():
+    try:
+        files = File.query.filter_by().all()
+        for file in files:
+            user = User.query.filter_by(id=file.user_id).first()
+            mdb_user = mdb.users.find_one({'email':user.email})
+            data = {'type':file.type,
+                    'mysql_id':file.id,
+                    'uploaded_user':{'id':str(mdb_user['_id']),
+                                   'email':user.email,
+                                   'username':user.username},
+                    'filename':file.name.split('.')[0],
+                    'extension':file.extension,
+                    'timestamp':{'uploaded':file.uploaded_dt}
+                    }
+            mdb.files.insert(data)
+    except:
+        return jsonify({'status':'error'})
+
+    return jsonify({'status':'success'})
+
+
+@app.route('/api/transfer/buckets')
+def bucket_transfer():
+    try:
+        buckets = Bucket.query.filter_by().all()
+        for bucket in buckets:
+            user = User.query.filter_by(id=bucket.user_id).first()
+            mdb_user = mdb.users.find_one({'email':user.email})
+            file = mdb.files.find_one({'mysql_id':bucket.cvr_img_id})
+            file2 = mdb.files.find_one({'mysql_id':user.profile_img_id})
+            data = {'mysql_id':bucket.id,
+                    'title':bucket.title,
+                    'deadline':bucket.deadline,
+                    'description':bucket.description,
+                    'status':bucket.status,
+                    'is_private':True if bucket.private else False,
+                    'language':bucket.language,
+                    'repeat':{'type':bucket.rpt_type,
+                              'condition':bucket.rpt_cndt},
+                    'timestamp':{'registered':bucket.reg_dt,
+                                 'modified':bucket.lst_mod_dt},
+                    'user':{'id':str(mdb_user['_id']),
+                            'username':user.username,
+                            'email':user.email,
+                            'profile_img':None if mdb_user['profile_img'] is None else {'id':str(file2['_id']),
+                                                                                        'url':mdb_user['profile_img']['url']}},
+                    'images': None if bucket.cvr_img_id is None else [{'id':str(file['_id']),
+                                                                   'url':url_for('send_pic', img_id=bucket.cvr_img_id, img_type='thumb_md', _external=True)}],
+                    'social':None if bucket.fb_feed_id is None else {'facebook':{'id':bucket.fb_feed_id}}
+                    }
+
+            mdb.buckets.insert(data)
+    except:
+        return jsonify({'status':'error'})
+
+    return jsonify({'status':'success'})
+
+
+@app.route('/api/transfer/journals')
+def journal_transfer():
+    try:
+        journals = Post.query.filter_by().all()
+        for journal in journals:
+            user = User.query.filter_by(id=journal.user_id).first()
+            mdb_user = mdb.users.find_one({'email':user.email})
+            bucket = mdb.buckets.find_one({'mysql_id':journal.bucket_id})
+            if journal.img_id is not None:
+                file = mdb.files.find_one({'mysql_id':journal.img_id})
+            data = {
+                    'journal':None if journal.text is None else journal.text,
+                    'images':None if journal.img_id is None else [
+                                    {'id':str(file['_id']),
+                                     'url':url_for('send_pic', img_id=file['mysql_id'], img_type='thumb_md', _external=True)}],
+                    'user':{'id':str(mdb_user['_id']),
+                            'username':user.username,
+                            'email':user.email,
+                            'profile_img':None if mdb_user['profile_img'] is None else {'id':str(mdb_user['profile_img']['id']),
+                                                                                        'url':mdb_user['profile_img']['url']}},
+                    'bucket':{'id':str(bucket['_id']),
+                              'title':bucket['title'],
+                              'deadline':bucket['deadline'],
+                              'user':bucket['user'],
+                              'images':bucket['img']},
+                    'timestamp':{'registered':journal.reg_dt,
+                                 'modified':journal.lst_mod_dt,
+                                 'user_defined':journal.content_dt},
+                    'social':None if journal.fb_feed_id is None else {'facebook':{'id':journal.fb_feed_id}}}
+            mdb.journals.insert(data)
+    except:
+        return jsonify({'status':'error'})
+
+    return jsonify({'status':'success'})

@@ -17,11 +17,22 @@ app.config.from_object('config')
 
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
-from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MONGODB_URI
+from config import ADMINS, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MONGODB_URI, FB_GRAPH_URL, FB_CLIENT_ID, FB_CLIENT_SECRET
 from app.models import db, Role, User
 from app.momentjs import momentjs
-
+from rauth.service import OAuth2Service
+from flask.ext.httpauth import HTTPBasicAuth
 from pymongo import MongoClient
+
+# Authentication
+httpAuth = HTTPBasicAuth()
+OAuth2_facebook = OAuth2Service(name='facebook',
+                          authorize_url='https://www.facebook.com/dialog/oauth',
+                          access_token_url=FB_GRAPH_URL+'oauth/access_token',
+                          client_id=FB_CLIENT_ID,
+                          client_secret=FB_CLIENT_SECRET,
+                          base_url=FB_GRAPH_URL);
+
 
 # RESTful API
 api = Api(app)
@@ -73,9 +84,7 @@ if not app.debug:
     app.logger.addHandler(file_handler)
     app.logger.info('dream startup')
 
-
-from app import models
-from app import views
+from app import auth, views, models, api
 from app.forms import SearchForm
 from app.mod_api.users import mod_api
 

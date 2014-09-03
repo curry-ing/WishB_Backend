@@ -57,7 +57,7 @@ def logging_social(uid, service_name, action, target, type):
 
 
 @async
-def logging_downlaod(ip_addr):
+def logging_download(ip_addr):
     download_log = mdb.download_log
 
     log = {"ip_addr": ip_addr,
@@ -67,7 +67,6 @@ def logging_downlaod(ip_addr):
 
 @async
 def logging_newsfeed(obj):
-    print obj
     mdb.newsfeed.insert(obj)
 
 @async

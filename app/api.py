@@ -17,9 +17,9 @@ from flask.ext.uploads import UploadSet, IMAGES, configure_uploads, patch_reques
 
 from hashlib import md5
 from rauth.service import OAuth2Service
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, literal_column
 # Source
-from app import db, api, app, mdb
+from app import db, api, app, mdb, httpAuth
 from models import User, Bucket, Plan, File, Post, UserSocial, ROLE_ADMIN, ROLE_USER
 from emails import send_awaiting_confirm_mail, send_reset_password_mail
 from config import FB_CLIENT_ID, FB_CLIENT_SECRET, POSTS_PER_PAGE, MAX_UPLOAD_SIZE, WISHB_SERVER_URI, MONGODB_URI
@@ -47,33 +47,33 @@ fb = OAuth2Service(name='facebook',
                    base_url=graph_url)
 
 
-@auth.verify_password
-def verify_password(username_or_token, password):
-    # first try to authenticate by token
-    if password == "facebook":
-        auth = fb.get_session(token=username_or_token)
-        resp = auth.get('/me')
-        if resp.status_code == 200:
-            fb_user = resp.json()
-            # user = User.query.filter_by(email=fb_user.get('email')).first()
-            birthday = fb_user['birthday'][6:10] + fb_user['birthday'][0:2] + fb_user['birthday'][3:5]
-            user = User.get_or_create(fb_user['email'], fb_user['name'], fb_user['id'], birthday)
-        else:
-            return False
-    else:
-        user = User.verify_auth_token(username_or_token)
-
-    if not user:
-        # try to authenticate with username/password
-        user = User.query.filter_by(email=username_or_token).first()
-        if not user:
-            return False
-        if user.password == None:
-            return False
-        if not user.verify_password(password):
-            return False
-    g.user = user
-    return True
+# @httpAuth.verify_password
+# def verify_password(username_or_token, password):
+#     # first try to authenticate by token
+#     if password == "facebook":
+#         auth = fb.get_session(token=username_or_token)
+#         resp = auth.get('/me')
+#         if resp.status_code == 200:
+#             fb_user = resp.json()
+#             # user = User.query.filter_by(email=fb_user.get('email')).first()
+#             birthday = fb_user['birthday'][6:10] + fb_user['birthday'][0:2] + fb_user['birthday'][3:5]
+#             user = User.get_or_create(fb_user['email'], fb_user['name'], fb_user['id'], birthday)
+#         else:
+#             return False
+#     else:
+#         user = User.verify_auth_token(username_or_token)
+#
+#     if not user:
+#         # try to authenticate with username/password
+#         user = User.query.filter_by(email=username_or_token).first()
+#         if not user:
+#             return False
+#         if user.password == None:
+#             return False
+#         if not user.verify_password(password):
+#             return False
+#     g.user = user
+#     return True
 
 
 class VerificationAPI(Resource):
@@ -178,7 +178,7 @@ api.add_resource(ResetPassword, '/api/reset_password/<string>', endpoint='resetP
 ##### USER / USERLIST ##################################
 
 class UserAPI(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(UserAPI, self).__init__()
@@ -197,7 +197,6 @@ class UserAPI(Resource):
         else:
             profile_img = None if u.profile_img_id is None else url_for('send_pic', img_id=u.profile_img_id,
                                                                         img_type='thumb_sm', _external=True)
-
         data = {'id': u.id,
                 'email': u.email,
                 'username': u.username,
@@ -215,12 +214,30 @@ class UserAPI(Resource):
                 'profile_img_url': profile_img
         }
 
-        logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
+        user = mdb.users.find_one({'email':u.email})
+        print user
+        mdb_data = {'_id':user['_id'],
+                    'email':user['email'],
+                    'username':user['username'],
+                    'last_seen':user['timestamp']['last_seen'],
+                    'birthday':user['birthday'],
+                    'title_life': None,
+                    'title_10': None,
+                    'title_20': None,
+                    'title_30': None,
+                    'title_40': None,
+                    'title_50': None,
+                    'title_60': None,
+                    'profile_img_url': None if user['profile_img'] is None else user['profile_img']['url'],
+                    }
+
+
+        # logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
 
         return {'status': 'success',
                 'description': 'normal',
-                'data': data}, 200
-        # 'data':marshal(u, user_fields)}, 200
+                'data': data,
+                'mdb_data':json.loads(json_util.dumps(mdb_data))}, 200
 
 
     #modify My User Profile
@@ -378,7 +395,7 @@ class UserListAPI(Resource):
     def __init__(self):
         super(UserListAPI, self).__init__()
 
-    @auth.login_required
+    @httpAuth.login_required
     def get(self):
         u = User.query.all()
         data = []
@@ -520,7 +537,7 @@ api.add_resource(UserListAPI, '/api/users', endpoint='users')
 
 ### Single Bucket #######
 class BucketAPI(Resource):
-    # decorators = [auth.login_required]
+    # decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(BucketAPI, self).__init__()
@@ -535,6 +552,10 @@ class BucketAPI(Resource):
                 g.user = User.query.filter_by(email=request.authorization['username']).first()
             uid = None
         b = Bucket.query.filter(Bucket.id == id, Bucket.status != '9').first()
+
+        if (uid is None or g.user.id != b.user_id) and b.private == 1:
+            return {'status':'error', 'description':'Unauthorized'}, 401
+
         if b == None:
             return {'status': 'error', 'description': 'No data found'}, 204
 
@@ -573,7 +594,7 @@ class BucketAPI(Resource):
                 'description': 'GET Success',
                 'data': data}, 200
 
-    @auth.login_required
+    @httpAuth.login_required
     def put(self, id):
         if request.json:
             params = request.json
@@ -784,6 +805,16 @@ class BucketAPI(Resource):
 
         # u = User.query.filter_by(id=b.user_id).first()
         if newsfeed_logging:
+            if g.user.profile_img_id == 0:
+                if g.user.fb_id == 0:
+                    profile_img = None
+                else:
+                    social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+                    graph = facebook.GraphAPI(social_user.access_token)
+                    args = {'type':'normal'}
+                    profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+            else:
+                profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
             nf_data = {
                 'object':'bucket',
                 'action':{'type':'modified',
@@ -792,22 +823,24 @@ class BucketAPI(Resource):
                 'bucket':{'id':b.id,
                           'title':b.title,
                           'deadline':b.deadline,
+                          'is_private':b.private,
                           'fb_feed_id':None if b.fb_feed_id is None else b.fb_feed_id,
                           'description':None if b.description is None else b.description,
                           'img_id':None if b.cvr_img_id is None else b.cvr_img_id},
                 'user':{'id':g.user.id,
                         'username':g.user.username,
                         'fb_id':g.user.fb_id,
-                        'profile_img_id':g.user.profile_img_id},
+                        'profile_img':profile_img},
             }
-            logging_newsfeed(nf_data)
+            if not b.private:
+                logging_newsfeed(nf_data)
 
         logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status': 'success',
                 'description': 'Bucket put success.',
                 'data': data}, 200
 
-    @auth.login_required
+    @httpAuth.login_required
     def delete(self, id):
         b = Bucket.query.filter_by(id=id).first()
 
@@ -838,7 +871,7 @@ class BucketAPI(Resource):
 
 ### User Bucket List ######
 class UserBucketAPI(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(UserBucketAPI, self).__init__()
@@ -854,13 +887,13 @@ class UserBucketAPI(Resource):
         data = []
         if g.user == u:
             b = Bucket.query.filter(Bucket.user_id == u.id,
-                                    Bucket.status != '9',
-                                    Bucket.level == '0').all()
+                                    Bucket.status != 9,
+                                    Bucket.level == 0).all()
         else:
             b = Bucket.query.filter(Bucket.user_id == u.id,
-                                    Bucket.status != '9',
-                                    Bucket.level == '0',
-                                    Bucket.private == '1').all()
+                                    Bucket.status != 9,
+                                    Bucket.level == 0,
+                                    Bucket.private == 0).all()
 
         if len(b) == 0:
             return {'status': 'error', 'description': 'No data Found'}, 204
@@ -945,10 +978,9 @@ class UserBucketAPI(Resource):
             else:
                 level = int(b.level) + 1
 
-        if 'rpt_type' in params:
-            if params['rpt_type'] not in ['WKRP', 'WEEK', 'MNTH']:
-                return {'status': 'error',
-                        'description': 'Invalid repeat-type value'}, 400
+        if 'rpt_type' in params and params['rpt_type'] not in ['WKRP', 'WEEK', 'MNTH']:
+            return {'status': 'error',
+                    'description': 'Invalid repeat-type value'}, 400
 
         if 'rpt_cndt' in params:
             dayOfWeek = datetime.date.today().weekday()
@@ -1070,6 +1102,17 @@ class UserBucketAPI(Resource):
                                                                        img_type='thumb_md', _external=True),
             'fb_feed_id': None if bkt.fb_feed_id is None else bkt.fb_feed_id
         }
+        if g.user.profile_img_id == 0:
+            if g.user.fb_id == 0:
+                profile_img = None
+            else:
+                social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+                graph = facebook.GraphAPI(social_user.access_token)
+                args = {'type':'normal'}
+                profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+        else:
+            profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
+
         nf_data = {
             'object':'bucket',
             'action':{'type':'registered'},
@@ -1077,15 +1120,17 @@ class UserBucketAPI(Resource):
             'bucket':{'id':bkt.id,
                       'title':bkt.title,
                       'deadline':bkt.deadline,
+                      'is_private':bkt.private,
                       'fb_feed_id':None if bkt.fb_feed_id is None else bkt.fb_feed_id,
                       'description':None if bkt.description is None else bkt.description,
                       'img_id':None if bkt.cvr_img_id is None else bkt.cvr_img_id},
             'user':{'id':u.id,
                     'username':u.username,
                     'fb_id':u.fb_id,
-                    'profile_img_id':u.profile_img_id},
+                    'profile_img':profile_img},
         }
-        logging_newsfeed(nf_data)
+        if not bkt.private:
+            logging_newsfeed(nf_data)
 
         try:
             stsd.gauge('BucketAdd_API_Call', 1, delta=True)
@@ -1107,7 +1152,7 @@ api.add_resource(UserBucketAPI, '/api/buckets/user/<int:id>', endpoint='buckets'
 ##### TODAY ##################################################
 
 class TodayListAPI(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(TodayListAPI, self).__init__()
@@ -1183,7 +1228,7 @@ class TodayListAPI(Resource):
 
 
 class TodayExistsAPI(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(TodayExistsAPI, self).__init__()
@@ -1214,7 +1259,7 @@ class TodayExistsAPI(Resource):
 
 
 class TodayAPI(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(TodayAPI, self).__init__()
@@ -1256,7 +1301,7 @@ api.add_resource(TodayAPI, '/api/today/<id>', endpoint='today')
 ##### FILE UPLOADS ##############################################
 
 class UploadFiles(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(UploadFiles, self).__init__()
@@ -1298,7 +1343,7 @@ api.add_resource(UploadFiles, '/api/file', endpoint='uploadFiles')
 ##### TIMELINE / Single Post #################################################
 
 class BucketTimeline(Resource):
-    # decorators = [auth.login_required]
+    # decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(BucketTimeline, self).__init__()
@@ -1374,7 +1419,7 @@ class BucketTimeline(Resource):
                 'description': str(len(result)) + ' posts were returned.',
                 'data': data}, 200
 
-    @auth.login_required
+    @httpAuth.login_required
     def post(self, bucket_id):
         b = Bucket.query.filter_by(id=bucket_id).first()
         # u = User.query.filter_by(id=b.user_id).first()
@@ -1528,7 +1573,16 @@ class BucketTimeline(Resource):
             stsd.gauge('Timeline_API_POST', 1, delta=True)
         except:
             pass
-
+        if g.user.profile_img_id == 0:
+            if g.user.fb_id == 0:
+                profile_img = None
+            else:
+                social_user = UserSocial.query.filter_by(user_id=g.user.id).first()
+                graph = facebook.GraphAPI(social_user.access_token)
+                args = {'type':'normal'}
+                profile_img = graph.get_object(g.user.fb_id+'/picture', **args)['url']
+        else:
+            profile_img = None if g.user.profile_img_id is None else url_for('send_pic', img_id=g.user.profile_img_id, img_type='thumb_sm', _external=True)
         nf_data = {
             'object':'journal',
             'action':{'type':'registered'},
@@ -1536,19 +1590,22 @@ class BucketTimeline(Resource):
             'bucket':{'id':b.id,
                       'title':b.title,
                       'deadline':b.deadline,
+                      'is_private':b.private,
                       'fb_feed_id':b.fb_feed_id,
                       'description':b.description,
                       'img_id':b.cvr_img_id},
             'journal':{'id':post.id,
                        'text':None if post.text is None else post.text,
                        'fb_feed_id':post.fb_feed_id,
+                       'is_private':False,
                        'img_id':post.img_id},
             'user':{'id':g.user.id,
                     'username':g.user.username,
                     'fb_id':g.user.fb_id,
-                    'profile_img_id':g.user.profile_img_id},
+                    'profile_img':profile_img},
         }
-        logging_newsfeed(nf_data)
+        if b.private:
+            logging_newsfeed(nf_data)
 
         logging_api(g.user.id, self.__class__.__name__, inspect.stack()[0][3])
         return {'status': 'success',
@@ -1557,7 +1614,7 @@ class BucketTimeline(Resource):
 
 
 class TimelineContent(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(TimelineContent, self).__init__()
@@ -1791,7 +1848,7 @@ class TimelineContent(Resource):
 
 
 class TimelineExists(Resource):
-    decorators = [auth.login_required]
+    decorators = [httpAuth.login_required]
 
     def __init__(self):
         super(TimelineExists, self).__init__()
@@ -2001,46 +2058,158 @@ class Newsfeed(Resource):
         super(Newsfeed, self).__init__()
 
     def get(self):
+        # print "1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
         data_asis = []
+        # print "2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
         data_tobe = []
+        # print "3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
         if 'page' in request.args:
+            # print "4-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             page = int(request.args['page']) - 1
+            # print "4-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             results = mdb.newsfeed.find().sort("_id",-1).skip(POSTS_PER_PAGE * page).limit(POSTS_PER_PAGE)
         elif 'type' in request.args:
+            # print "5-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if request.args['type'] not in ['older', 'newer']:
                 return {'status':'error', 'description':'Value of [TYPE] must be in [older, newer]'}, 403
+            # print "5-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             type = request.args['type']
+            # print "5-3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             baseline = request.args['baseline']
+            # print "5-4 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if type == 'older':
+                # print "5-5-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 results = mdb.newsfeed.find({'_id':{'$lt':ObjectId(baseline)}}).sort("_id",-1).limit(POSTS_PER_PAGE)
             elif type == 'newer':
+                # print "5-5-2 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 results = mdb.newsfeed.find({'_id':{'$gt':ObjectId(baseline)}}).sort("_id",-1)
+        elif 'mdb_insert' in request.args and request.args['mdb_insert'] == 'wishb_mongodb_insert':
+
+            q1 = db.session.query(literal_column('"Bucket"').label('type'),
+                                  Bucket.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Bucket.lst_mod_dt.label('lst_mod_dt'),
+                                  Bucket.description.label('text'),
+                                  Bucket.cvr_img_id.label('img_id'),
+                                  Bucket.reg_dt.label('reg_dt'),
+                                  Bucket.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.user_id == User.id)
+            q2 = db.session.query(literal_column('"Timeline"').label('type'),
+                                  Post.id.label('id'),
+                                  Bucket.title.label('title'),
+                                  Bucket.deadline.label('deadline'),
+                                  Post.lst_mod_dt.label('lst_mod_dt'),
+                                  Post.text.label('text'),
+                                  Post.img_id.label('img_id'),
+                                  Post.reg_dt.label('reg_dt'),
+                                  Post.fb_feed_id.label('fb_feed_id'),
+                                  User.username.label('username'),
+                                  User.profile_img_id.label('user_img'),
+                                  User.fb_id.label('fb_id'),
+                                  User.id.label('user_id')) \
+                .filter(Bucket.id == Post.bucket_id) \
+                .filter(Bucket.user_id == User.id)
+            q = q1.union(q2).order_by('lst_mod_dt')
+            for i in q:
+
+                if i.user_img == 0:
+                    if i.fb_id == 0 or i.fb_id is None:
+                        profile_img = None
+                    else:
+                        social_user = UserSocial.query.filter_by(user_id=i.user_id).first()
+                        graph = facebook.GraphAPI(social_user.access_token)
+                        args = {'type':'normal'}
+                        profile_img = graph.get_object(i.fb_id+'/picture', **args)['url']
+                else:
+                    profile_img = None if i.user_img is None else url_for('send_pic', img_id=i.user_img, img_type='thumb_sm', _external=True)
+
+
+                if i.type == 'Bucket':
+                    b = Bucket.query.filter_by(id=i.id).first()
+                    u = User.query.filter_by(id=b.user_id).first()
+                    logging_newsfeed({
+                        'object':'bucket',
+                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
+                                  'items':None},
+                        'timestamp':i.lst_mod_dt,
+                        'bucket':{'id':b.id,
+                                  'title':b.title,
+                                  'deadline':b.deadline,
+                                  'description':b.description,
+                                  'fb_feed_id':b.fb_feed_id,
+                                  'img_id':b.cvr_img_id},
+                        'user':{'id':u.id,
+                                'username':u.username,
+                                'fb_id':u.fb_id,
+                                'profile_img':profile_img}
+                    })
+                elif i.type == 'Timeline':
+                    p = Post.query.filter_by(id=i.id).first()
+                    b = Bucket.query.filter_by(id=p.bucket_id).first()
+                    u = User.query.filter_by(id=p.user_id).first()
+                    logging_newsfeed({
+                        'object':'journal',
+                        'action':{'type':"modified" if i.reg_dt < i.lst_mod_dt else "registered",
+                                  'items':None},
+                        'timestamp':i.lst_mod_dt,
+                        'bucket':{'id':b.id,
+                                  'title':b.title,
+                                  'deadline':b.deadline,
+                                  'description':b.description,
+                                  'fb_feed_id':b.fb_feed_id,
+                                  'img_id':b.cvr_img_id},
+                        'journal':{'id':p.id,
+                                   'text':p.text,
+                                   'img_id':p.img_id,
+                                   'fb_feed_id':p.fb_feed_id},
+                        'user':{'id':u.id,
+                                'username':u.username,
+                                'fb_id':u.fb_id,
+                                'profile_img':profile_img}
+                    })
         else:
+            print "6 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             return {'status': 'error',
                     'description': 'Request parameter error'}, 403
 
+        i = 0
         for result in results:
+            # print "7-" + str(i) + "-1 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             if result['object'] == 'bucket':
+                # print "7-" + str(i) + "-2b : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 id = result['bucket']['id']
                 text = result['bucket']['description']
                 img_id = result['bucket']['img_id']
                 fb_feed_id = result['bucket']['fb_feed_id']
             elif result['object'] == 'journal':
+                # print "7-" + str(i) + "-2j : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
                 id = result['journal']['id']
                 text = result['journal']['text']
                 img_id = result['journal']['img_id']
                 fb_feed_id = result['journal']['fb_feed_id']
 
-            if result['user']['profile_img_id'] == 0:
-                if result['user']['fb_id'] == 0:
-                    profile_img = None
-                else:
-                    social_user = UserSocial.query.filter_by(user_id=result['user']['id']).first()
-                    graph = facebook.GraphAPI(social_user.access_token)
-                    args = {'type':'normal'}
-                    profile_img = graph.get_object(result['user']['fb_id']+'/picture', **args)['url']
-            else:
-                profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
+            # if result['user']['profile_img_id'] == 0:
+            #     print "7-" + str(i) + "-3 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #     if result['user']['fb_id'] == 0:
+            #         print "7-" + str(i) + "-4 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #         profile_img = None
+            #     else:
+            #         print "7-" + str(i) + "-5 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #         social_user = UserSocial.query.filter_by(user_id=result['user']['id']).first()
+            #         print "7-" + str(i) + "-6 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #         graph = facebook.GraphAPI(social_user.access_token)
+            #         print "7-" + str(i) + "-7 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #         args = {'type':'normal'}
+            #         print "7-" + str(i) + "-8 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #         profile_img = graph.get_object(result['user']['fb_id']+'/picture', **args)['url']
+            # else:
+            #     print "7-" + str(i) + "-9 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
+            #     profile_img = None if result['user']['profile_img_id'] is None else url_for('send_pic', img_id=result['user']['profile_img_id'], img_type='thumb_sm', _external=True)
 
             data_asis.append({'type':result['object'],
                          '_id':str(result['_id']),
@@ -2052,13 +2221,16 @@ class Newsfeed(Resource):
                                      'img':None if img_id is None else url_for('send_pic', img_id=img_id, img_type='thumb_md', _external=True)},
                          'user_id':result['user']['id'],
                          'username':result['user']['username'],
-                         'user_profile_img': profile_img,
+                         'user_profile_img': result['user']['profile_img'],
                          'action':result['action']['type'],
                          'action_items':result['action']['items'] if 'items' in result['action'] else None,
                          'fb_feed_id':fb_feed_id})
+            # print "7-" + str(i) + "-10 : " + datetime.datetime.now().strftime("%H:%M:%S.%f")
             data_tobe.append(json.loads(json_util.dumps(result)))
 
         return {"status":"success", "data":data_asis, "data_tobe":data_tobe}, 200
 
 
 api.add_resource(Newsfeed, '/api/newsfeed', endpoint='newsfeed')
+
+
